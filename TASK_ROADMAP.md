@@ -42,23 +42,23 @@ This roadmap outlines the complete sequence of engineering deliverables required
 
 ## Phase 2: Real-Time Binance WebSocket Service & Chart Integration
 
-- [ ] **2.1 Build Binance Multiplexed WebSocket Client (`BinanceWsService.ts`)**
+- [x] **2.1 Build Binance Multiplexed WebSocket Client (`BinanceWsService.ts`)**
   - Deliverable: WebSocket singleton connecting to `wss://fstream.binance.com/stream` with subscriptions for BTC, ETH, and SOL `@ticker`, `@kline_1m`, and `@markPrice@1s`.
   - Acceptance Criteria: Handles incoming raw payloads, parses numeric strings to floating-point numbers, and dispatches to `MarketDataStore`.
 
-- [ ] **2.2 Implement Reconnection Backoff & Heartbeat Telemetry**
+- [x] **2.2 Implement Reconnection Backoff & Heartbeat Telemetry**
   - Deliverable: Automatic heartbeat detector pinging every 15s, paired with exponential backoff reconnect logic (1s, 2s, 4s, up to 30s) and fallback REST polling.
   - Acceptance Criteria: System Tray reflects connection status in real-time (`WS LIVE ●` in green vs `WS RECONNECTING...` in amber) and displays live latency (ms).
 
-- [ ] **2.3 Create Market Data Zustand Store (`useMarketDataStore.ts`)**
+- [x] **2.3 Create Market Data Zustand Store (`useMarketDataStore.ts`)**
   - Deliverable: Reactive store tracking current selected pair, real-time mark prices, 24h ticker metrics, and latest candlestick updates.
   - Acceptance Criteria: Changing active pair unsubscribes previous streams and binds new pair data within <300ms.
 
-- [ ] **2.4 Integrate TradingView Lightweight Charts in `TurboTrade.exe`**
+- [x] **2.4 Integrate TradingView Lightweight Charts in `TurboTrade.exe`**
   - Deliverable: Interactive candlestick chart component inside `TurboTrade.exe` styled with retro CRT dark palette (`#121212` canvas, green candles `#00FF66`, red candles `#FF3333`, zero border radius).
   - Acceptance Criteria: Historical 1m klines pre-loaded via Binance REST API (`/fapi/v1/klines`), streaming live updates via WebSocket at 60 FPS.
 
-- [ ] **2.5 Build Market Selector & 24H Metric Card (Left Panel)**
+- [x] **2.5 Build Market Selector & 24H Metric Card (Left Panel)**
   - Deliverable: Left panel component for `TurboTrade.exe` featuring pair selector buttons (BTC, ETH, SOL), large monospace price readout, 24h high/low, and simulated 8-hour funding rate countdown.
   - Acceptance Criteria: Live price flashes green/red on tick updates; 24h change badge updates dynamically.
 

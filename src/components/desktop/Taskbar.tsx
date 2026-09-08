@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useWindowStore } from '@/stores/useWindowStore';
+import { useMarketDataStore } from '@/stores/useMarketDataStore';
 import { WindowId } from '@/types/window';
 import { PixelIcon } from '@/components/common/PixelIcon';
 
@@ -9,6 +10,9 @@ export const Taskbar: React.FC = () => {
   const openWindow = useWindowStore((state) => state.openWindow);
   const focusWindow = useWindowStore((state) => state.focusWindow);
   const minimizeWindow = useWindowStore((state) => state.minimizeWindow);
+
+  const connectionStatus = useMarketDataStore((state) => state.connectionStatus);
+  const pingLatency = useMarketDataStore((state) => state.pingLatency);
 
   const [isStartOpen, setIsStartOpen] = useState(false);
   const [timeStr, setTimeStr] = useState('');
@@ -207,10 +211,30 @@ export const Taskbar: React.FC = () => {
         {/* Right Section: System Tray */}
         <div className="win-inset px-2 py-0.5 bg-win-base flex items-center space-x-2.5 font-mono text-[10px] flex-shrink-0">
           {/* WS Live Indicator */}
-          <div className="flex items-center space-x-1 text-[#006622] font-bold">
-            <span>WS</span>
-            <span className="w-2 h-2 rounded-full bg-crt-bullish animate-pulse"></span>
-            <span>LIVE</span>
+          <div className="flex items-center space-x-1 font-bold">
+            <span className="text-bevel-dark">WS</span>
+            {connectionStatus === 'CONNECTED' ? (
+              <>
+                <span className="w-2 h-2 rounded-full bg-crt-bullish animate-pulse"></span>
+                <span className="text-[#008531]">LIVE</span>
+                <span className="text-[9px] text-[#555]">[{pingLatency}ms]</span>
+              </>
+            ) : connectionStatus === 'RECONNECTING' ? (
+              <>
+                <span className="w-2 h-2 rounded-full bg-crt-amber animate-ping"></span>
+                <span className="text-crt-amber">RECONNECTING...</span>
+              </>
+            ) : connectionStatus === 'CONNECTING' ? (
+              <>
+                <span className="w-2 h-2 rounded-full bg-crt-amber animate-pulse"></span>
+                <span className="text-crt-amber">CONNECTING</span>
+              </>
+            ) : (
+              <>
+                <span className="w-2 h-2 rounded-full bg-crt-bearish"></span>
+                <span className="text-crt-bearish">OFFLINE</span>
+              </>
+            )}
           </div>
 
           {/* Quick Balance */}

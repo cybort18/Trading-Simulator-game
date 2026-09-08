@@ -1,22 +1,61 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { WindowFrame } from '@/components/desktop/WindowFrame';
 import { PixelIcon } from '@/components/common/PixelIcon';
+import { useMarketDataStore } from '@/stores/useMarketDataStore';
+import { TradingPair } from '@/types/market';
+import { RetroCandleChart } from '@/components/trading/RetroCandleChart';
 
 export const TurboTradeWindow: React.FC = () => {
-  const [activePair, setActivePair] = useState<'BTC/USDT' | 'ETH/USDT' | 'SOL/USDT'>('BTC/USDT');
+  const selectedPair = useMarketDataStore((state) => state.selectedPair);
+  const setSelectedPair = useMarketDataStore((state) => state.setSelectedPair);
+  const prices = useMarketDataStore((state) => state.prices);
+  const priceDirections = useMarketDataStore((state) => state.priceDirections);
+  const tickers = useMarketDataStore((state) => state.tickers);
+  const connectionStatus = useMarketDataStore((state) => state.connectionStatus);
+
+  const [timeframe, setTimeframe] = useState<string>('1m');
   const [leverage, setLeverage] = useState<number>(20);
   const [orderType, setOrderType] = useState<'market' | 'limit'>('market');
   const [marginMode, setMarginMode] = useState<'isolated' | 'cross'>('isolated');
   const [orderSize, setOrderSize] = useState<string>('5.00');
   const [bottomTab, setBottomTab] = useState<'positions' | 'history'>('positions');
+  const [fundingCountdown, setFundingCountdown] = useState<string>('07:59:45');
 
-  const pairPrices: Record<string, { price: string; change: string; isBull: boolean }> = {
-    'BTC/USDT': { price: '$64,281.50', change: '+2.45%', isBull: true },
-    'ETH/USDT': { price: '$3,495.20', change: '-1.15%', isBull: false },
-    'SOL/USDT': { price: '$148.60', change: '+5.82%', isBull: true },
+  const currentPrice = prices[selectedPair] || 64281.5;
+  const currentTicker = tickers[selectedPair];
+  const direction = priceDirections[selectedPair];
+
+  // Dynamic countdown timer to next 8h funding window
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date();
+      const nextHour = (Math.floor(now.getUTCHours() / 8) + 1) * 8;
+      const targetTime = new Date(now);
+      targetTime.setUTCHours(nextHour, 0, 0, 0);
+
+      const diff = Math.max(0, targetTime.getTime() - now.getTime());
+      const h = String(Math.floor(diff / (1000 * 60 * 60))).padStart(2, '0');
+      const m = String(Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
+      const s = String(Math.floor((diff % (1000 * 60)) / 1000)).padStart(2, '0');
+      setFundingCountdown(`${h}:${m}:${s}`);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Precise mathematical liquidation price calculation from SIMULATION_ENGINE.md
+  const mmr = selectedPair === 'BTCUSDT' ? 0.005 : selectedPair === 'ETHUSDT' ? 0.0065 : 0.01;
+  const takerFee = 0.0005;
+  const estLiqLong = currentPrice * ((1 - 1 / leverage) / (1 - mmr - takerFee));
+  const estLiqShort = currentPrice * ((1 + 1 / leverage) / (1 + mmr + takerFee));
+
+  const notional = (Number(orderSize) || 0) * leverage;
+  const fee = notional * takerFee;
+
+  const pairLabelMap: Record<TradingPair, string> = {
+    BTCUSDT: 'BTC/USDT',
+    ETHUSDT: 'ETH/USDT',
+    SOLUSDT: 'SOL/USDT',
   };
-
-  const currentPriceInfo = pairPrices[activePair];
 
   return (
     <WindowFrame
@@ -25,84 +64,120 @@ export const TurboTradeWindow: React.FC = () => {
       statusContent={
         <>
           <div className="flex items-center space-x-2">
-            <span className="text-crt-bullish font-bold">● WS ENGINE: NORMAL</span>
+            <span
+              className={`font-bold ${
+                connectionStatus === 'CONNECTED'
+                  ? 'text-crt-bullish'
+                  : connectionStatus === 'RECONNECTING'
+                  ? 'text-crt-amber animate-pulse'
+                  : 'text-crt-bearish'
+              }`}
+            >
+              ● BINANCE WS: {connectionStatus}
+            </span>
             <span>|</span>
-            <span>LATENCY: 14ms</span>
+            <span>STREAM: @ticker/@kline_1m/@markPrice</span>
             <span>|</span>
-            <span>FEED: BINANCE-FUTURES</span>
+            <span>PAIR: {pairLabelMap[selectedPair]}</span>
           </div>
           <div className="flex items-center space-x-2 font-mono">
-            <span>MEM: 1,420KB / 16MB</span>
-            <span className="font-bold text-titlebar-navy">[SECURE 128-BIT SSL]</span>
+            <span>DATA: HIGH-PRECISION</span>
+            <span className="font-bold text-titlebar-navy">[SECURE CHANNEL]</span>
           </div>
         </>
       }
     >
-      <div className="flex-1 flex flex-col md:flex-row gap-1 h-full min-h-0 text-black">
+      <div className="flex-1 flex flex-col md:flex-row gap-1 h-full min-h-0 text-black font-ui">
         {/* =================================================================== */}
-        {/* LEFT PANEL: Market Selector & 24h Metrics (20%)                     */}
+        {/* LEFT PANEL: Market Selector & Live Metrics (20%)                   */}
         {/* =================================================================== */}
         <div className="w-full md:w-[220px] flex flex-col gap-1 flex-shrink-0">
           {/* Pair Selector Strip */}
           <div className="win-inset bg-win-base p-1 flex flex-col gap-1">
             <div className="font-bold text-[10px] text-bevel-dark uppercase">Select Contract:</div>
             <div className="grid grid-cols-3 gap-1">
-              {(['BTC/USDT', 'ETH/USDT', 'SOL/USDT'] as const).map((pair) => (
+              {(['BTCUSDT', 'ETHUSDT', 'SOLUSDT'] as const).map((pair) => (
                 <button
                   key={pair}
-                  onClick={() => setActivePair(pair)}
+                  onClick={() => setSelectedPair(pair)}
                   className={`py-1 text-[10px] font-bold ${
-                    activePair === pair ? 'win-btn-pressed bg-win-pressed' : 'win-btn bg-win-base'
+                    selectedPair === pair
+                      ? 'win-btn-pressed bg-win-pressed font-extrabold text-titlebar-navy'
+                      : 'win-btn bg-win-base'
                   }`}
                 >
-                  {pair.split('/')[0]}
+                  {pair.replace('USDT', '')}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Real-time Ticker Metrics Card */}
+          {/* Real-time Live Ticker Card */}
           <div className="win-inset-deep p-2 text-white flex flex-col gap-1.5 crt-grid">
             <div className="flex justify-between items-center text-[10px] text-[#A0A0A0]">
-              <span className="font-bold font-mono">{activePair} PERP</span>
-              <span className="win-inset px-1 bg-[#1A1A1A] text-crt-bullish text-[9px]">LIVE</span>
+              <span className="font-bold font-mono">{pairLabelMap[selectedPair]} PERP</span>
+              <span className="win-inset px-1 bg-[#1A1A1A] text-crt-bullish text-[9px] font-mono">
+                {connectionStatus === 'CONNECTED' ? 'LIVE ●' : connectionStatus}
+              </span>
             </div>
 
-            <div className="font-mono text-[22px] font-bold leading-none text-crt-bullish crt-glow-green">
-              {currentPriceInfo.price}
+            {/* Dynamic Tick Color Flash Monospace Price Readout */}
+            <div
+              className={`font-mono text-[22px] font-bold leading-none transition-colors duration-150 ${
+                direction === 'up'
+                  ? 'text-crt-bullish crt-glow-green'
+                  : direction === 'down'
+                  ? 'text-crt-bearish crt-glow-red'
+                  : 'text-white'
+              }`}
+            >
+              $
+              {currentPrice.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
             </div>
 
             <div className="flex items-center justify-between text-[11px] font-mono">
               <span className="text-bevel-shadow">24h Change:</span>
               <span
                 className={`font-bold ${
-                  currentPriceInfo.isBull ? 'text-crt-bullish' : 'text-crt-bearish'
+                  currentTicker.change24h >= 0 ? 'text-crt-bullish' : 'text-crt-bearish'
                 }`}
               >
-                {currentPriceInfo.change}
+                {currentTicker.change24h >= 0 ? '+' : ''}
+                {currentTicker.change24h.toFixed(2)}%
               </span>
             </div>
 
             <div className="border-t border-[#333] pt-1 flex flex-col gap-0.5 text-[9px] font-mono text-[#AAA]">
               <div className="flex justify-between">
                 <span>24h High:</span>
-                <span className="text-white">$65,240.00</span>
+                <span className="text-white">${currentTicker.high24h.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span>24h Low:</span>
-                <span className="text-white">$63,180.50</span>
+                <span className="text-white">${currentTicker.low24h.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
+                <span>24h Volume:</span>
+                <span className="text-white">
+                  {currentTicker.volume24h.toLocaleString('en-US', { maximumFractionDigits: 1 })}
+                </span>
+              </div>
+              <div className="flex justify-between border-t border-[#2A2A2A] pt-0.5 mt-0.5">
                 <span>Funding Rate:</span>
-                <span className="text-crt-amber font-bold">0.0100% in 03:42:15</span>
+                <span className="text-crt-amber font-bold">
+                  {(currentTicker.fundingRate * 100).toFixed(4)}% in {fundingCountdown}
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Quick Account Summary Inset */}
+          {/* Account Margin Inset */}
           <div className="win-inset bg-win-base p-1.5 flex flex-col gap-1 text-[10px]">
             <div className="flex justify-between">
-              <span className="text-bevel-shadow">Wallet Equity:</span>
+              <span className="text-bevel-shadow">Account Equity:</span>
               <span className="font-mono font-bold text-titlebar-navy">16.71 USDT</span>
             </div>
             <div className="flex justify-between">
@@ -117,101 +192,67 @@ export const TurboTradeWindow: React.FC = () => {
         </div>
 
         {/* =================================================================== */}
-        {/* CENTER PANEL: Candlestick Chart & Open Positions Table (55%)        */}
+        {/* CENTER PANEL: Interactive Lightweight Candlestick Chart (55%)       */}
         {/* =================================================================== */}
         <div className="flex-1 flex flex-col gap-1 min-w-0">
           {/* Chart Viewport & Toolbar */}
-          <div className="flex-1 win-inset-deep p-1 flex flex-col min-h-[260px] relative overflow-hidden crt-grid">
+          <div className="flex-1 win-inset-deep p-1 flex flex-col min-h-[280px] relative overflow-hidden bg-[#121212]">
             {/* Chart Toolbar */}
             <div className="flex items-center justify-between pb-1 border-b border-[#2A2A2A] text-[10px] text-white">
               <div className="flex items-center space-x-1">
-                <span className="font-bold text-crt-amber font-mono mr-1">{activePair}</span>
-                {['1m', '5m', '15m', '1h', '1D'].map((tf, i) => (
+                <span className="font-bold text-crt-amber font-mono mr-1.5">
+                  {pairLabelMap[selectedPair]}
+                </span>
+                {['1m', '5m', '15m', '1h', '1D'].map((tf) => (
                   <button
                     key={tf}
+                    onClick={() => setTimeframe(tf)}
                     className={`px-1.5 py-0.5 text-[9px] font-mono ${
-                      i === 0 ? 'bg-[#333] text-crt-bullish font-bold border border-[#555]' : 'hover:bg-[#222]'
+                      timeframe === tf
+                        ? 'win-btn-pressed bg-[#333] text-crt-bullish font-bold border border-[#555]'
+                        : 'win-btn bg-win-base text-black'
                     }`}
                   >
                     {tf}
                   </button>
                 ))}
               </div>
-              <div className="text-[9px] text-[#888] font-mono">
-                INDICATORS: [MA 7, 25, 99] [VOL] [MACD]
+
+              <div className="text-[9px] text-[#888] font-mono hidden sm:block">
+                BINANCE PERPETUAL • REALTIME 1M WS
               </div>
             </div>
 
-            {/* Simulated CRT Candlestick Canvas Graphic */}
-            <div className="flex-1 flex flex-col items-center justify-center relative p-2">
-              {/* Retro Grid Lines */}
-              <div className="absolute inset-0 grid grid-cols-8 grid-rows-6 opacity-15 pointer-events-none">
-                {Array.from({ length: 48 }).map((_, i) => (
-                  <div key={i} className="border-r border-b border-[#00FF66]"></div>
-                ))}
-              </div>
-
-              {/* Watermark in background */}
-              <div className="absolute text-center text-[#1A2E22] font-mono text-[32px] font-bold select-none pointer-events-none tracking-widest">
-                CRYPTOOS 98 // BINANCE WS
-              </div>
-
-              {/* Simulated Candlesticks */}
-              <div className="w-full h-40 flex items-end justify-around px-4 z-10">
-                {[
-                  { h: 60, bull: true },
-                  { h: 80, bull: true },
-                  { h: 45, bull: false },
-                  { h: 70, bull: true },
-                  { h: 95, bull: true },
-                  { h: 85, bull: false },
-                  { h: 110, bull: true },
-                  { h: 90, bull: false },
-                  { h: 125, bull: true },
-                  { h: 140, bull: true },
-                  { h: 130, bull: false },
-                  { h: 155, bull: true },
-                ].map((c, idx) => (
-                  <div key={idx} className="flex flex-col items-center w-3">
-                    <div
-                      className={`w-[1px] h-3 ${c.bull ? 'bg-crt-bullish' : 'bg-crt-bearish'}`}
-                    ></div>
-                    <div
-                      style={{ height: `${c.h}px` }}
-                      className={`w-2.5 ${
-                        c.bull
-                          ? 'bg-crt-bullish border border-[#33FF88]'
-                          : 'bg-crt-bearish border border-[#FF6666]'
-                      }`}
-                    ></div>
-                    <div
-                      className={`w-[1px] h-3 ${c.bull ? 'bg-crt-bullish' : 'bg-crt-bearish'}`}
-                    ></div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Real-time Ticker floating badge */}
-              <div className="absolute right-3 top-10 win-inset bg-[#0A120D] text-crt-bullish px-2 py-1 text-[11px] font-mono border border-[#00FF66] shadow-lg">
-                LAST: $64,281.50 ▲ +2.45%
-              </div>
+            {/* TradingView Canvas Mount */}
+            <div className="flex-1 w-full h-full min-h-[220px] relative">
+              <RetroCandleChart pair={selectedPair} timeframe={timeframe} />
             </div>
 
-            {/* Chart Sub-status */}
+            {/* Real-time Chart Footer Sub-status */}
             <div className="flex items-center justify-between text-[9px] font-mono text-[#777] border-t border-[#222] pt-0.5">
-              <span>O: 63,950.00 | H: 64,310.00 | L: 63,890.00 | C: 64,281.50</span>
-              <span className="text-crt-amber font-bold">EST. LIQ PRICE: $57,315.23</span>
+              <span>
+                MARK: $
+                {currentPrice.toLocaleString('en-US', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </span>
+              <span className="text-crt-amber font-bold">
+                EST. LONG LIQ: ${estLiqLong.toFixed(2)} | SHORT LIQ: ${estLiqShort.toFixed(2)}
+              </span>
             </div>
           </div>
 
           {/* Bottom Tabs: Open Positions / Order History */}
-          <div className="h-[170px] win-inset bg-win-base p-1 flex flex-col">
+          <div className="h-[160px] win-inset bg-win-base p-1 flex flex-col flex-shrink-0">
             {/* Tabs Header */}
             <div className="flex items-center space-x-1 border-b border-bevel-shadow pb-1">
               <button
                 onClick={() => setBottomTab('positions')}
                 className={`px-3 py-0.5 text-[10px] font-bold ${
-                  bottomTab === 'positions' ? 'win-btn-pressed bg-win-pressed' : 'win-btn bg-win-base'
+                  bottomTab === 'positions'
+                    ? 'win-btn-pressed bg-win-pressed text-titlebar-navy'
+                    : 'win-btn bg-win-base text-black'
                 }`}
               >
                 Open Positions (1)
@@ -219,14 +260,16 @@ export const TurboTradeWindow: React.FC = () => {
               <button
                 onClick={() => setBottomTab('history')}
                 className={`px-3 py-0.5 text-[10px] font-bold ${
-                  bottomTab === 'history' ? 'win-btn-pressed bg-win-pressed' : 'win-btn bg-win-base'
+                  bottomTab === 'history'
+                    ? 'win-btn-pressed bg-win-pressed text-titlebar-navy'
+                    : 'win-btn bg-win-base text-black'
                 }`}
               >
                 Order History
               </button>
             </div>
 
-            {/* Tab 1: Positions Table */}
+            {/* Positions Table */}
             {bottomTab === 'positions' ? (
               <div className="flex-1 overflow-auto mt-1 win-inset-deep bg-[#121212] p-0.5">
                 <table className="w-full text-left font-mono text-[9px] text-white">
@@ -253,13 +296,17 @@ export const TurboTradeWindow: React.FC = () => {
                       </td>
                       <td className="p-1">0.0016 BTC</td>
                       <td className="p-1">$60,000.00</td>
-                      <td className="p-1 font-bold text-crt-bullish">$64,281.50</td>
+                      <td className="p-1 font-bold text-crt-bullish">
+                        ${prices.BTCUSDT.toFixed(2)}
+                      </td>
                       <td className="p-1 text-crt-amber font-bold">$57,315.23</td>
                       <td className="p-1">5.00 USDT</td>
-                      <td className="p-1 font-bold text-crt-bullish">+142.7%</td>
+                      <td className="p-1 font-bold text-crt-bullish">
+                        {(((prices.BTCUSDT - 60000) / 60000) * 20 * 100).toFixed(1)}%
+                      </td>
                       <td className="p-1 text-right">
                         <button
-                          onClick={() => alert('Position closed at market! Profit realized: +7.13 USDT')}
+                          onClick={() => alert('Position closed at market!')}
                           className="win-btn text-[9px] px-1.5 py-0.5 text-error font-bold"
                         >
                           Close [X]
@@ -285,13 +332,17 @@ export const TurboTradeWindow: React.FC = () => {
           <div className="grid grid-cols-2 gap-1 font-bold text-[10px]">
             <button
               onClick={() => setOrderType('market')}
-              className={`py-1 ${orderType === 'market' ? 'win-btn-pressed bg-win-pressed' : 'win-btn'}`}
+              className={`py-1 ${
+                orderType === 'market' ? 'win-btn-pressed bg-win-pressed' : 'win-btn'
+              }`}
             >
               [ Market ]
             </button>
             <button
               onClick={() => setOrderType('limit')}
-              className={`py-1 ${orderType === 'limit' ? 'win-btn-pressed bg-win-pressed' : 'win-btn'}`}
+              className={`py-1 ${
+                orderType === 'limit' ? 'win-btn-pressed bg-win-pressed' : 'win-btn'
+              }`}
             >
               [ Limit ]
             </button>
@@ -324,10 +375,11 @@ export const TurboTradeWindow: React.FC = () => {
           <div className="win-inset bg-surface-low p-1.5 flex flex-col gap-1 text-[10px]">
             <div className="flex justify-between items-center font-bold">
               <span>Leverage:</span>
-              <span className="font-mono text-titlebar-navy text-[12px]">{leverage}x Multiplier</span>
+              <span className="font-mono text-titlebar-navy text-[12px]">
+                {leverage}x Multiplier
+              </span>
             </div>
 
-            {/* Stepped Track */}
             <input
               type="range"
               min="1"
@@ -390,19 +442,19 @@ export const TurboTradeWindow: React.FC = () => {
             </div>
           </div>
 
-          {/* Pre-trade Calculation Box */}
+          {/* Real-time Pre-trade Calculation Box */}
           <div className="win-inset-deep p-1.5 font-mono text-[9px] text-white flex flex-col gap-1">
             <div className="flex justify-between">
               <span className="text-bevel-shadow">Notional Value:</span>
-              <span className="text-white">${(Number(orderSize || 0) * leverage).toFixed(2)}</span>
+              <span className="text-white">${notional.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-bevel-shadow">Est. Liq Price:</span>
-              <span className="text-crt-bearish font-bold">$57,315.23</span>
+              <span className="text-crt-bearish font-bold">${estLiqLong.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-bevel-shadow">Taker Fee (0.05%):</span>
-              <span>${((Number(orderSize || 0) * leverage) * 0.0005).toFixed(4)}</span>
+              <span>${fee.toFixed(4)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-bevel-shadow">Slippage Tolerance:</span>
@@ -413,16 +465,28 @@ export const TurboTradeWindow: React.FC = () => {
           {/* Execution Action Buttons */}
           <div className="flex flex-col gap-1.5 pt-1">
             <button
-              onClick={() => alert(`Order placed: OPEN LONG ${leverage}x on ${activePair} for ${orderSize} USDT!`)}
-              className="win-btn bg-[#008531] text-white font-bold py-2 flex items-center justify-center space-x-1.5 hover:bg-[#009938] active:translate-x-0.5 active:translate-y-0.5"
+              onClick={() =>
+                alert(
+                  `Order placed: OPEN LONG ${leverage}x on ${pairLabelMap[selectedPair]} at $${currentPrice.toFixed(
+                    2
+                  )} for ${orderSize} USDT!`
+                )
+              }
+              className="win-btn bg-[#008531] text-white font-bold py-2 flex items-center justify-center space-x-1.5 hover:bg-[#009938] active:translate-x-0.5 active:translate-y-0.5 shadow"
             >
               <PixelIcon name="arrow_up" size={14} className="text-crt-bullish" />
               <span className="text-[11px] tracking-wide uppercase">OPEN LONG (BUY)</span>
             </button>
 
             <button
-              onClick={() => alert(`Order placed: OPEN SHORT ${leverage}x on ${activePair} for ${orderSize} USDT!`)}
-              className="win-btn bg-[#BA1A1A] text-white font-bold py-2 flex items-center justify-center space-x-1.5 hover:bg-[#CC2020] active:translate-x-0.5 active:translate-y-0.5"
+              onClick={() =>
+                alert(
+                  `Order placed: OPEN SHORT ${leverage}x on ${pairLabelMap[selectedPair]} at $${currentPrice.toFixed(
+                    2
+                  )} for ${orderSize} USDT!`
+                )
+              }
+              className="win-btn bg-[#BA1A1A] text-white font-bold py-2 flex items-center justify-center space-x-1.5 hover:bg-[#CC2020] active:translate-x-0.5 active:translate-y-0.5 shadow"
             >
               <PixelIcon name="arrow_down" size={14} className="text-white" />
               <span className="text-[11px] tracking-wide uppercase">OPEN SHORT (SELL)</span>

@@ -22,7 +22,7 @@ Proyek ini dibangun di atas 5 dokumen arsitektur dan spesifikasi engineering len
 
 ---
 
-## Status Proyek Saat Ini: Phase 1 Selesai
+## Status Proyek Saat Ini: Phase 1 & Phase 2 Selesai
 
 - [x] **Phase 1: Environment Setup, Tailwind Retro Preset & Window Manager**
   - [x] Inisialisasi Vite + React 18 + TypeScript (`strict: true`) + path alias `@/*`.
@@ -32,6 +32,13 @@ Proyek ini dibangun di atas 5 dokumen arsitektur dan spesifikasi engineering len
   - [x] Draggable Window Manager (`WindowFrame.tsx`) dengan pembatas layar (boundary clamping), minimize/maximize/close, dan active navy titlebar gradient.
   - [x] State management multi-window reaktif berbasis Zustand (`useWindowStore.ts`).
   - [x] Shell aplikasi: `TurboTradeWindow`, `DegenVaultWindow`, `LeaderboardWindow`, `WelcomeModal`, dan `ShareFlexCardModal`.
+
+- [x] **Phase 2: Real-Time Binance WebSocket Service & Chart Integration**
+  - [x] Singleton `BinanceWsService.ts` multiplexing live stream Binance (`@ticker`, `@kline_1m`, `@markPrice@1s`).
+  - [x] Reconnection exponential backoff, 15s heartbeat liveness check, dan fallback REST hydration.
+  - [x] Reactive state store `useMarketDataStore.ts` tracking live prices, 24h ticker metrics, funding rate, dan telemetry latency.
+  - [x] Integrasi TradingView `Lightweight Charts` (v5) di dalam CRT container `#121212` dengan candlestick merah/hijau retro.
+  - [x] Dynamic pair switcher (`BTC/USDT`, `ETH/USDT`, `SOL/USDT`), monospace price banner dengan flash warna tick, countdown funding 8-jam, dan sinkronisasi status System Tray.
   - [x] Production build lolos uji 100% (`tsc && vite build`) dengan 0 error dan 0 warning.
 
 ---
