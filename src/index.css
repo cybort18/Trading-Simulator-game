@@ -1,0 +1,136 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    border-radius: 0px !important;
+  }
+  
+  body {
+    font-family: 'MS Sans Serif', Tahoma, 'Segoe UI', sans-serif;
+    font-size: 11px;
+    line-height: 14px;
+    -webkit-font-smoothing: none;
+    -moz-osx-font-smoothing: grayscale;
+    user-select: none;
+  }
+}
+
+/* ========================================================================= */
+/* 1. OUTSET (Raised 3D Surface - Buttons, Windows, Unpressed Tabs)          */
+/* ========================================================================= */
+.win-outset {
+  border-top: 2px solid #FFFFFF;
+  border-left: 2px solid #FFFFFF;
+  border-bottom: 2px solid #000000;
+  border-right: 2px solid #000000;
+  box-shadow: inset -1px -1px 0px #808080, inset 1px 1px 0px #DFDFDF;
+  background-color: #C0C0C0;
+}
+
+/* ========================================================================= */
+/* 2. INSET (Sunken 3D Surface - Inputs, System Tray, Status Recesses)       */
+/* ========================================================================= */
+.win-inset {
+  border-top: 2px solid #808080;
+  border-left: 2px solid #808080;
+  border-bottom: 2px solid #FFFFFF;
+  border-right: 2px solid #FFFFFF;
+  box-shadow: inset 1px 1px 0px #000000, inset -1px -1px 0px #DFDFDF;
+  background-color: #C0C0C0;
+}
+
+/* ========================================================================= */
+/* 3. INSET DEEP (Terminal Canvas, Chart Cavities, Data Wells)               */
+/* ========================================================================= */
+.win-inset-deep {
+  border-top: 2px solid #000000;
+  border-left: 2px solid #000000;
+  border-bottom: 2px solid #FFFFFF;
+  border-right: 2px solid #FFFFFF;
+  box-shadow: inset 1px 1px 0px #808080;
+  background-color: #121212;
+}
+
+/* ========================================================================= */
+/* 4. BUTTON BEVELS (Interactive Tactile Feedback)                           */
+/* ========================================================================= */
+.win-btn {
+  border-top: 2px solid #FFFFFF;
+  border-left: 2px solid #FFFFFF;
+  border-bottom: 2px solid #000000;
+  border-right: 2px solid #000000;
+  box-shadow: inset -1px -1px 0px #808080, inset 1px 1px 0px #DFDFDF;
+  background-color: #C0C0C0;
+  user-select: none;
+  cursor: pointer;
+  transition: none;
+}
+
+.win-btn:active, .win-btn-pressed {
+  border-top: 2px solid #000000 !important;
+  border-left: 2px solid #000000 !important;
+  border-bottom: 2px solid #FFFFFF !important;
+  border-right: 2px solid #FFFFFF !important;
+  box-shadow: inset 1px 1px 0px #808080 !important;
+  background-color: #B4B4B4 !important;
+  transform: translate(1px, 1px);
+}
+
+.win-btn-focus {
+  outline: 1px dotted #000000;
+  outline-offset: -3px;
+}
+
+/* Window Outer Bevel Framing */
+.window-outer-frame {
+  border-top: 2px solid #FFFFFF;
+  border-left: 2px solid #FFFFFF;
+  border-right: 2px solid #000000;
+  border-bottom: 2px solid #000000;
+  box-shadow: inset 1px 1px 0px #DFDFDF, inset -1px -1px 0px #808080;
+  background-color: #C0C0C0;
+}
+
+/* ========================================================================= */
+/* 5. TITLEBAR GRADIENTS                                                     */
+/* ========================================================================= */
+.titlebar-active {
+  background: linear-gradient(90deg, #000080 0%, #1084D0 100%);
+  color: #FFFFFF;
+}
+
+.titlebar-inactive {
+  background: #808080;
+  color: #C0C0C0;
+}
+
+/* ========================================================================= */
+/* 6. CRT SCANLINES & PIXEL TEXTURES                                         */
+/* ========================================================================= */
+.crt-grid {
+  background-image: 
+    linear-gradient(rgba(18, 18, 18, 0.94) 50%, rgba(10, 10, 10, 0.94) 50%),
+    linear-gradient(90deg, rgba(255,0,0,0.03), rgba(0,255,0,0.01), rgba(0,0,255,0.03));
+  background-size: 100% 2px, 3px 100%;
+}
+
+.crt-glow-green {
+  text-shadow: 0 0 6px rgba(0, 255, 102, 0.6);
+}
+
+.crt-glow-red {
+  text-shadow: 0 0 6px rgba(255, 51, 51, 0.6);
+}
+
+.crt-glow-amber {
+  text-shadow: 0 0 6px rgba(255, 170, 0, 0.6);
+}
+
+/* Retro Pixel rendering */
+.retro-font-render {
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: grayscale;
+  image-rendering: pixelated;
+}
