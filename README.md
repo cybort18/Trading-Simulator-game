@@ -1,11 +1,11 @@
-# 💾 CryptoOS 98 — Retro Crypto Futures Trading Simulator
+# CryptoOS 98 — Retro Crypto Futures Trading Simulator
 
 > **Nostalgia Windows 98 meets High-Stakes Crypto Futures Trading.**  
 > Simulator trading perpetual futures crypto dengan zero financial risk, live market feeds dari Binance, dan antarmuka desktop OS retro era 90-an.
 
 ---
 
-## 📑 Fondasi Dokumentasi Engineering
+## Fondasi Dokumentasi Engineering
 
 Proyek ini dibangun di atas 5 dokumen arsitektur dan spesifikasi engineering lengkap:
 
@@ -22,7 +22,7 @@ Proyek ini dibangun di atas 5 dokumen arsitektur dan spesifikasi engineering len
 
 ---
 
-## 🚀 Status Proyek Saat Ini: Phase 1 Selesai
+## Status Proyek Saat Ini: Phase 1 Selesai
 
 - [x] **Phase 1: Environment Setup, Tailwind Retro Preset & Window Manager**
   - [x] Inisialisasi Vite + React 18 + TypeScript (`strict: true`) + path alias `@/*`.
@@ -36,7 +36,7 @@ Proyek ini dibangun di atas 5 dokumen arsitektur dan spesifikasi engineering len
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **UI Framework:** React 18, TypeScript (Strict Mode)
 - **Build Tool:** Vite 5
@@ -47,7 +47,7 @@ Proyek ini dibangun di atas 5 dokumen arsitektur dan spesifikasi engineering len
 
 ---
 
-## 💻 Cara Menjalankan Secara Lokal
+## Cara Menjalankan Secara Lokal
 
 Pastikan Anda telah menginstal **Node.js (v18+)** dan **npm**:
 
@@ -72,7 +72,7 @@ npm run build
 
 ---
 
-## 🗺️ Roadmap Selanjutnya (Phase 2 - 5)
+## Roadmap Selanjutnya (Phase 2 - 5)
 
 - **Phase 2:** Binance WebSocket multiplexed data stream ingestion & TradingView Lightweight Charts integration.
 - **Phase 3:** Trading simulation math engine (unit-tested), real-time liquidation scanner, dan fee/funding rate calculation.
