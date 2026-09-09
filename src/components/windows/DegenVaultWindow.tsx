@@ -1,18 +1,27 @@
 import React, { useState } from 'react';
 import { WindowFrame } from '@/components/desktop/WindowFrame';
 import { PixelIcon } from '@/components/common/PixelIcon';
+import { useWalletStore } from '@/stores/useWalletStore';
 import confetti from 'canvas-confetti';
 
 export const DegenVaultWindow: React.FC = () => {
   const [day2Claimed, setDay2Claimed] = useState(false);
-  const [equity, setEquity] = useState(16.71);
-  const [availMargin, setAvailMargin] = useState(7.50);
+
+  const equity = useWalletStore((state) => state.equity);
+  const availMargin = useWalletStore((state) => state.availableMargin);
+  const lockedMargin = useWalletStore((state) => state.lockedMargin);
+  const winCount = useWalletStore((state) => state.winCount);
+  const totalTrades = useWalletStore((state) => state.totalTrades);
+  const winRate = useWalletStore((state) => state.getWinRate());
+  const allTimeRoi = useWalletStore((state) => state.getAllTimeRoi());
+  const isFaucetAvailable = useWalletStore((state) => state.isFaucetAvailable());
+  const claimFaucet = useWalletStore((state) => state.claimFaucet);
+  const resetWallet = useWalletStore((state) => state.resetWallet);
 
   const handleClaim = () => {
     if (day2Claimed) return;
     setDay2Claimed(true);
-    setEquity((prev) => prev + 5.0);
-    setAvailMargin((prev) => prev + 5.0);
+    useWalletStore.getState().recordTradeResult(5.0, 0);
     confetti({
       particleCount: 80,
       spread: 70,
@@ -21,8 +30,7 @@ export const DegenVaultWindow: React.FC = () => {
   };
 
   const handleFaucet = () => {
-    setEquity((prev) => prev + 10.0);
-    setAvailMargin((prev) => prev + 10.0);
+    claimFaucet(10.0);
     confetti({
       particleCount: 50,
       spread: 60,
@@ -129,9 +137,9 @@ export const DegenVaultWindow: React.FC = () => {
             <div className="win-inset bg-[#181818] p-1.5 border border-[#262626]">
               <span className="block font-mono text-[9px] text-[#888]">LOCKED MARGIN</span>
               <span className="font-mono text-[18px] font-bold text-crt-amber">
-                $2.50
+                ${lockedMargin.toFixed(2)}
               </span>
-              <span className="block font-mono text-[8px] text-crt-amber">BTC Perp 20x</span>
+              <span className="block font-mono text-[8px] text-crt-amber">Active Positions</span>
             </div>
           </div>
 
@@ -139,15 +147,17 @@ export const DegenVaultWindow: React.FC = () => {
           <div className="grid grid-cols-3 gap-2 pt-1 border-t border-[#333] font-mono text-[10px]">
             <div className="flex justify-between items-center bg-[#181818] px-2 py-1 border border-[#262626]">
               <span className="text-[#888]">All-Time ROI:</span>
-              <span className="text-crt-bullish font-bold">+67.1% ▲</span>
+              <span className={`font-bold ${allTimeRoi >= 0 ? 'text-crt-bullish' : 'text-crt-bearish'}`}>
+                {allTimeRoi >= 0 ? '+' : ''}{allTimeRoi.toFixed(1)}% {allTimeRoi >= 0 ? '▲' : '▼'}
+              </span>
             </div>
             <div className="flex justify-between items-center bg-[#181818] px-2 py-1 border border-[#262626]">
               <span className="text-[#888]">Win Rate:</span>
-              <span className="text-[#76D6D5] font-bold">62.5% (5/8)</span>
+              <span className="text-[#76D6D5] font-bold">{winRate.toFixed(1)}% ({winCount}/{totalTrades})</span>
             </div>
             <div className="flex justify-between items-center bg-[#181818] px-2 py-1 border border-[#262626]">
               <span className="text-[#888]">Total Trades:</span>
-              <span className="text-white font-bold">8 Executed</span>
+              <span className="text-white font-bold">{totalTrades} Executed</span>
             </div>
           </div>
 
@@ -156,7 +166,9 @@ export const DegenVaultWindow: React.FC = () => {
             <div className="flex items-center space-x-2">
               <button
                 onClick={handleFaucet}
-                className="win-btn text-black text-[10px] font-bold px-2 py-0.5 flex items-center gap-1 active:translate-x-0.5 active:translate-y-0.5"
+                className={`win-btn text-[10px] font-bold px-2 py-0.5 flex items-center gap-1 active:translate-x-0.5 active:translate-y-0.5 ${
+                  isFaucetAvailable ? 'bg-crt-amber text-black animate-pulse' : 'text-black'
+                }`}
               >
                 <span>💧</span>
                 <span>Virtual Faucet (+10 USDT)</span>
@@ -164,8 +176,7 @@ export const DegenVaultWindow: React.FC = () => {
               <button
                 onClick={() => {
                   if (confirm('Reset wallet to default 10.00 USDT?')) {
-                    setEquity(10.0);
-                    setAvailMargin(10.0);
+                    resetWallet(10.0);
                     setDay2Claimed(false);
                   }
                 }}

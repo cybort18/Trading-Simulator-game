@@ -66,7 +66,7 @@ This roadmap outlines the complete sequence of engineering deliverables required
 
 ## Phase 3: Trading & Liquidation Simulation Engine (Unit-Tested)
 
-- [ ] **3.1 Implement Math Core Library (`simulationMath.ts`)**
+- [x] **3.1 Implement Math Core Library (`simulationMath.ts`)**
   - Deliverable: Pure functional implementations of formulas from `SIMULATION_ENGINE.md`:
     - `calculateNotionalValue(margin, leverage)`
     - `calculateQuantity(margin, leverage, price)`
@@ -76,15 +76,15 @@ This roadmap outlines the complete sequence of engineering deliverables required
     - `calculateLiquidationPrice(entryPrice, quantity, initialMargin, leverage, mmr, takerFee, direction, marginMode, totalEquity)`
   - Acceptance Criteria: 100% test coverage using Vitest/Jest matching worked numerical examples to within 4 decimal places.
 
-- [ ] **3.2 Build Order Execution Engine (`TradingEngine.ts`)**
+- [x] **3.2 Build Order Execution Engine (`TradingEngine.ts`)**
   - Deliverable: Execution logic handling Market and Limit orders, Long and Short directions, Isolated and Cross margin modes.
   - Acceptance Criteria: Rejects orders exceeding `availableMargin`; deducts initial margin and 0.05% taker fee; appends new position to `TradingStore`.
 
-- [ ] **3.3 Implement High-Frequency Liquidation Scanner Loop**
+- [x] **3.3 Implement High-Frequency Liquidation Scanner Loop**
   - Deliverable: Reactive tick evaluation callback triggering on every Binance mark price update.
   - Acceptance Criteria: Checks active positions against $P_{\text{liq}}$; executes forced closure the instant Mark Price breaches threshold; transfers position to history marked `LIQUIDATED`.
 
-- [ ] **3.4 Implement Simulated Funding Rate Engine**
+- [x] **3.4 Implement Simulated Funding Rate Engine**
   - Deliverable: Periodic timer simulating funding rate transfers every 8 hours (00:00, 08:00, 16:00 UTC).
   - Acceptance Criteria: Deducts/credits funding payment ($V \times R_{\text{fund}}$) from/to open positions and logs transaction to wallet ledger.
 

@@ -7,6 +7,7 @@ import { DegenVaultWindow } from '@/components/windows/DegenVaultWindow';
 import { LeaderboardWindow } from '@/components/windows/LeaderboardWindow';
 import { WelcomeModal } from '@/components/windows/WelcomeModal';
 import { ShareFlexCardModal } from '@/components/windows/ShareFlexCardModal';
+import { LiquidationModal } from '@/components/modals/LiquidationModal';
 import { Taskbar } from '@/components/desktop/Taskbar';
 
 interface DesktopIconConfig {
@@ -100,6 +101,7 @@ export const DesktopCanvas: React.FC = () => {
       <LeaderboardWindow />
       <WelcomeModal />
       <ShareFlexCardModal />
+      <LiquidationModal />
 
       {/* =================================================================== */}
       {/* FIXED RETRO TASKBAR & SYSTEM TRAY                                   */}

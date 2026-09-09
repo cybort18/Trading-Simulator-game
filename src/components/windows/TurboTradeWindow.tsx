@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { WindowFrame } from '@/components/desktop/WindowFrame';
 import { PixelIcon } from '@/components/common/PixelIcon';
 import { useMarketDataStore } from '@/stores/useMarketDataStore';
+import { useTradingStore } from '@/stores/useTradingStore';
+import { useWalletStore } from '@/stores/useWalletStore';
+import { fundingRateEngine } from '@/services/FundingRateEngine';
 import { TradingPair } from '@/types/market';
 import { RetroCandleChart } from '@/components/trading/RetroCandleChart';
 
@@ -13,32 +16,34 @@ export const TurboTradeWindow: React.FC = () => {
   const tickers = useMarketDataStore((state) => state.tickers);
   const connectionStatus = useMarketDataStore((state) => state.connectionStatus);
 
+  const availableMargin = useWalletStore((state) => state.availableMargin);
+  const positions = useTradingStore((state) => state.positions);
+  const tradeHistory = useTradingStore((state) => state.tradeHistory);
+  const openPosition = useTradingStore((state) => state.openPosition);
+  const closePosition = useTradingStore((state) => state.closePosition);
+
   const [timeframe, setTimeframe] = useState<string>('1m');
   const [leverage, setLeverage] = useState<number>(20);
   const [orderType, setOrderType] = useState<'market' | 'limit'>('market');
   const [marginMode, setMarginMode] = useState<'isolated' | 'cross'>('isolated');
   const [orderSize, setOrderSize] = useState<string>('5.00');
   const [bottomTab, setBottomTab] = useState<'positions' | 'history'>('positions');
-  const [fundingCountdown, setFundingCountdown] = useState<string>('07:59:45');
+  const [fundingCountdown, setFundingCountdown] = useState<string>('08:00:00');
+
+  const [orderError, setOrderError] = useState<string | null>(null);
 
   const currentPrice = prices[selectedPair] || 64281.5;
   const currentTicker = tickers[selectedPair];
   const direction = priceDirections[selectedPair];
 
-  // Dynamic countdown timer to next 8h funding window
+  // Dynamic countdown timer using FundingRateEngine
   useEffect(() => {
-    const timer = setInterval(() => {
-      const now = new Date();
-      const nextHour = (Math.floor(now.getUTCHours() / 8) + 1) * 8;
-      const targetTime = new Date(now);
-      targetTime.setUTCHours(nextHour, 0, 0, 0);
-
-      const diff = Math.max(0, targetTime.getTime() - now.getTime());
-      const h = String(Math.floor(diff / (1000 * 60 * 60))).padStart(2, '0');
-      const m = String(Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
-      const s = String(Math.floor((diff % (1000 * 60)) / 1000)).padStart(2, '0');
-      setFundingCountdown(`${h}:${m}:${s}`);
-    }, 1000);
+    const updateCountdown = () => {
+      const countdown = fundingRateEngine.getTimeUntilNextFunding();
+      setFundingCountdown(countdown.formatted);
+    };
+    updateCountdown();
+    const timer = setInterval(updateCountdown, 1000);
     return () => clearInterval(timer);
   }, []);
 
@@ -271,55 +276,122 @@ export const TurboTradeWindow: React.FC = () => {
 
             {/* Positions Table */}
             {bottomTab === 'positions' ? (
-              <div className="flex-1 overflow-auto mt-1 win-inset-deep bg-[#121212] p-0.5">
-                <table className="w-full text-left font-mono text-[9px] text-white">
-                  <thead className="bg-[#222] text-[#AAA] border-b border-[#333]">
-                    <tr>
-                      <th className="p-1">Pair</th>
-                      <th className="p-1">Direction</th>
-                      <th className="p-1">Size</th>
-                      <th className="p-1">Entry</th>
-                      <th className="p-1">Mark</th>
-                      <th className="p-1">Liq Price</th>
-                      <th className="p-1">Margin</th>
-                      <th className="p-1">ROE %</th>
-                      <th className="p-1 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#1F1F1F]">
-                    <tr className="hover:bg-[#1A1A1A]">
-                      <td className="p-1 font-bold text-white">BTC/USDT</td>
-                      <td className="p-1">
-                        <span className="bg-[#003311] text-crt-bullish px-1 py-0.2 border border-crt-bullish font-bold">
-                          LONG 20x
-                        </span>
-                      </td>
-                      <td className="p-1">0.0016 BTC</td>
-                      <td className="p-1">$60,000.00</td>
-                      <td className="p-1 font-bold text-crt-bullish">
-                        ${prices.BTCUSDT.toFixed(2)}
-                      </td>
-                      <td className="p-1 text-crt-amber font-bold">$57,315.23</td>
-                      <td className="p-1">5.00 USDT</td>
-                      <td className="p-1 font-bold text-crt-bullish">
-                        {(((prices.BTCUSDT - 60000) / 60000) * 20 * 100).toFixed(1)}%
-                      </td>
-                      <td className="p-1 text-right">
-                        <button
-                          onClick={() => alert('Position closed at market!')}
-                          className="win-btn text-[9px] px-1.5 py-0.5 text-error font-bold"
-                        >
-                          Close [X]
-                        </button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+              positions.length === 0 ? (
+                <div className="flex-1 p-4 font-mono text-[10px] text-bevel-shadow flex items-center justify-center">
+                  NO ACTIVE OPEN POSITIONS. SELECT CONTRACT &amp; EXECUTE AN ORDER ON RIGHT PANEL.
+                </div>
+              ) : (
+                <div className="flex-1 overflow-auto mt-1 win-inset-deep bg-[#121212] p-0.5">
+                  <table className="w-full text-left font-mono text-[9px] text-white">
+                    <thead className="bg-[#222] text-[#AAA] border-b border-[#333] sticky top-0">
+                      <tr>
+                        <th className="p-1">Pair</th>
+                        <th className="p-1">Direction</th>
+                        <th className="p-1">Size</th>
+                        <th className="p-1">Entry</th>
+                        <th className="p-1">Mark</th>
+                        <th className="p-1">Liq Price</th>
+                        <th className="p-1">Margin</th>
+                        <th className="p-1">uPnL (ROE)</th>
+                        <th className="p-1 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#1F1F1F]">
+                      {positions.map((pos) => {
+                        const mark = prices[pos.pair] || pos.markPrice;
+                        const isBullish = pos.unrealizedPnl >= 0;
+                        return (
+                          <tr key={pos.id} className="hover:bg-[#1A1A1A]">
+                            <td className="p-1 font-bold text-white">{pairLabelMap[pos.pair]}</td>
+                            <td className="p-1">
+                              <span
+                                className={`px-1 py-0.2 border font-bold ${
+                                  pos.direction === 'LONG'
+                                    ? 'bg-[#003311] text-crt-bullish border-crt-bullish'
+                                    : 'bg-[#330000] text-crt-bearish border-crt-bearish'
+                                }`}
+                              >
+                                {pos.direction} {pos.leverage}x
+                              </span>
+                            </td>
+                            <td className="p-1">{pos.quantity.toFixed(4)}</td>
+                            <td className="p-1">${pos.entryPrice.toFixed(2)}</td>
+                            <td className="p-1 font-bold text-white">${mark.toFixed(2)}</td>
+                            <td className="p-1 text-crt-amber font-bold">${pos.liquidationPrice.toFixed(2)}</td>
+                            <td className="p-1">{pos.initialMargin.toFixed(2)} USDT</td>
+                            <td className={`p-1 font-bold ${isBullish ? 'text-crt-bullish' : 'text-crt-bearish'}`}>
+                              {isBullish ? '+' : ''}${pos.unrealizedPnl.toFixed(2)} ({isBullish ? '+' : ''}{pos.roe.toFixed(2)}%)
+                            </td>
+                            <td className="p-1 text-right">
+                              <button
+                                onClick={() => closePosition(pos.id, mark)}
+                                className="win-btn text-[9px] px-1.5 py-0.5 text-error font-bold active:translate-x-0.5 active:translate-y-0.5"
+                              >
+                                Close [X]
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )
             ) : (
-              <div className="flex-1 p-2 font-mono text-[10px] text-bevel-shadow flex items-center justify-center">
-                No past orders recorded in this session.
-              </div>
+              tradeHistory.length === 0 ? (
+                <div className="flex-1 p-4 font-mono text-[10px] text-bevel-shadow flex items-center justify-center">
+                  NO PAST ORDERS RECORDED IN THIS SESSION.
+                </div>
+              ) : (
+                <div className="flex-1 overflow-auto mt-1 win-inset-deep bg-[#121212] p-0.5">
+                  <table className="w-full text-left font-mono text-[9px] text-white">
+                    <thead className="bg-[#222] text-[#AAA] border-b border-[#333] sticky top-0">
+                      <tr>
+                        <th className="p-1">Time</th>
+                        <th className="p-1">Pair</th>
+                        <th className="p-1">Side</th>
+                        <th className="p-1">Entry</th>
+                        <th className="p-1">Exit</th>
+                        <th className="p-1">Realized PnL</th>
+                        <th className="p-1">ROE %</th>
+                        <th className="p-1 text-right">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#1F1F1F]">
+                      {tradeHistory.map((item) => (
+                        <tr key={item.id} className="hover:bg-[#1A1A1A]">
+                          <td className="p-1 text-gray-400">{new Date(item.closedAt).toLocaleTimeString()}</td>
+                          <td className="p-1 font-bold text-white">{pairLabelMap[item.pair]}</td>
+                          <td className="p-1">
+                            <span className={item.direction === 'LONG' ? 'text-green-400' : 'text-red-400'}>
+                              {item.direction} {item.leverage}x
+                            </span>
+                          </td>
+                          <td className="p-1">${item.entryPrice.toFixed(2)}</td>
+                          <td className="p-1">${item.exitPrice.toFixed(2)}</td>
+                          <td className={`p-1 font-bold ${item.realizedPnl >= 0 ? 'text-crt-bullish' : 'text-crt-bearish'}`}>
+                            {item.realizedPnl >= 0 ? '+' : ''}${item.realizedPnl.toFixed(2)}
+                          </td>
+                          <td className={`p-1 ${item.roe >= 0 ? 'text-crt-bullish' : 'text-crt-bearish'}`}>
+                            {item.roe >= 0 ? '+' : ''}{item.roe.toFixed(2)}%
+                          </td>
+                          <td className="p-1 text-right">
+                            <span
+                              className={`px-1 py-0.2 text-[8px] font-bold ${
+                                item.status === 'LIQUIDATED'
+                                  ? 'bg-red-900 text-white'
+                                  : 'bg-green-900 text-white'
+                              }`}
+                            >
+                              {item.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )
             )}
           </div>
         </div>
@@ -410,14 +482,17 @@ export const TurboTradeWindow: React.FC = () => {
           <div className="flex flex-col gap-1 text-[10px]">
             <div className="flex justify-between">
               <span className="font-bold">Order Margin:</span>
-              <span className="font-mono text-bevel-shadow">Avail: 7.50 USDT</span>
+              <span className="font-mono text-bevel-shadow">Avail: ${availableMargin.toFixed(2)} USDT</span>
             </div>
 
             <div className="win-inset-deep bg-white flex items-center px-1.5 py-0.5">
               <input
                 type="text"
                 value={orderSize}
-                onChange={(e) => setOrderSize(e.target.value)}
+                onChange={(e) => {
+                  setOrderSize(e.target.value);
+                  setOrderError(null);
+                }}
                 className="w-full bg-transparent font-mono text-[14px] font-bold text-black border-none outline-none p-0"
               />
               <span className="font-bold text-bevel-shadow text-[10px]">USDT</span>
@@ -429,10 +504,15 @@ export const TurboTradeWindow: React.FC = () => {
                 <button
                   key={pct}
                   onClick={() => {
-                    if (pct === '25%') setOrderSize('1.87');
-                    if (pct === '50%') setOrderSize('3.75');
-                    if (pct === '75%') setOrderSize('5.62');
-                    if (pct === 'MAX') setOrderSize('7.50');
+                    setOrderError(null);
+                    if (pct === '25%') setOrderSize((availableMargin * 0.25).toFixed(2));
+                    if (pct === '50%') setOrderSize((availableMargin * 0.50).toFixed(2));
+                    if (pct === '75%') setOrderSize((availableMargin * 0.75).toFixed(2));
+                    if (pct === 'MAX') {
+                      // Max available leaving fee buffer
+                      const maxMargin = Math.max(0, availableMargin * 0.98);
+                      setOrderSize(maxMargin.toFixed(2));
+                    }
                   }}
                   className="win-btn py-0.5 text-center font-bold active:translate-x-0.5 active:translate-y-0.5"
                 >
@@ -462,16 +542,38 @@ export const TurboTradeWindow: React.FC = () => {
             </div>
           </div>
 
+          {/* Order Error Notification */}
+          {orderError && (
+            <div className="bg-[#FFE5E5] text-crt-bearish text-[8px] font-bold p-1 border border-crt-bearish">
+              ⚠ {orderError}
+            </div>
+          )}
+
           {/* Execution Action Buttons */}
           <div className="flex flex-col gap-1.5 pt-1">
             <button
-              onClick={() =>
-                alert(
-                  `Order placed: OPEN LONG ${leverage}x on ${pairLabelMap[selectedPair]} at $${currentPrice.toFixed(
-                    2
-                  )} for ${orderSize} USDT!`
-                )
-              }
+              onClick={() => {
+                setOrderError(null);
+                const margin = parseFloat(orderSize);
+                if (isNaN(margin) || margin <= 0) {
+                  setOrderError('Enter valid margin amount');
+                  return;
+                }
+                const res = openPosition(
+                  {
+                    pair: selectedPair,
+                    direction: 'LONG',
+                    marginMode: marginMode.toUpperCase() as 'ISOLATED' | 'CROSS',
+                    leverage,
+                    margin,
+                    type: orderType.toUpperCase() as 'MARKET' | 'LIMIT',
+                  },
+                  currentPrice
+                );
+                if (!res.success) {
+                  setOrderError(res.error || 'Order failed');
+                }
+              }}
               className="win-btn bg-[#008531] text-white font-bold py-2 flex items-center justify-center space-x-1.5 hover:bg-[#009938] active:translate-x-0.5 active:translate-y-0.5 shadow"
             >
               <PixelIcon name="arrow_up" size={14} className="text-crt-bullish" />
@@ -479,13 +581,28 @@ export const TurboTradeWindow: React.FC = () => {
             </button>
 
             <button
-              onClick={() =>
-                alert(
-                  `Order placed: OPEN SHORT ${leverage}x on ${pairLabelMap[selectedPair]} at $${currentPrice.toFixed(
-                    2
-                  )} for ${orderSize} USDT!`
-                )
-              }
+              onClick={() => {
+                setOrderError(null);
+                const margin = parseFloat(orderSize);
+                if (isNaN(margin) || margin <= 0) {
+                  setOrderError('Enter valid margin amount');
+                  return;
+                }
+                const res = openPosition(
+                  {
+                    pair: selectedPair,
+                    direction: 'SHORT',
+                    marginMode: marginMode.toUpperCase() as 'ISOLATED' | 'CROSS',
+                    leverage,
+                    margin,
+                    type: orderType.toUpperCase() as 'MARKET' | 'LIMIT',
+                  },
+                  currentPrice
+                );
+                if (!res.success) {
+                  setOrderError(res.error || 'Order failed');
+                }
+              }}
               className="win-btn bg-[#BA1A1A] text-white font-bold py-2 flex items-center justify-center space-x-1.5 hover:bg-[#CC2020] active:translate-x-0.5 active:translate-y-0.5 shadow"
             >
               <PixelIcon name="arrow_down" size={14} className="text-white" />

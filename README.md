@@ -22,7 +22,7 @@ Proyek ini dibangun di atas 5 dokumen arsitektur dan spesifikasi engineering len
 
 ---
 
-## Status Proyek Saat Ini: Phase 1 & Phase 2 Selesai
+## Status Proyek Saat Ini: Phase 1, Phase 2, dan Phase 3 Selesai
 
 - [x] **Phase 1: Environment Setup, Tailwind Retro Preset & Window Manager**
   - [x] Inisialisasi Vite + React 18 + TypeScript (`strict: true`) + path alias `@/*`.
@@ -40,6 +40,15 @@ Proyek ini dibangun di atas 5 dokumen arsitektur dan spesifikasi engineering len
   - [x] Integrasi TradingView `Lightweight Charts` (v5) di dalam CRT container `#121212` dengan candlestick merah/hijau retro.
   - [x] Dynamic pair switcher (`BTC/USDT`, `ETH/USDT`, `SOL/USDT`), monospace price banner dengan flash warna tick, countdown funding 8-jam, dan sinkronisasi status System Tray.
   - [x] Production build lolos uji 100% (`tsc && vite build`) dengan 0 error dan 0 warning.
+
+- [x] **Phase 3: Trading & Liquidation Simulation Engine (Unit-Tested)**
+  - [x] Math core library `simulationMath.ts` mengimplementasikan rumus eksak perpetual futures: Notional Value, Quantity, uPnL, ROE %, Maintenance Margin, Liquidation Price (isolated & cross margin), Slippage model, dan Fees.
+  - [x] Test runner Vitest dengan 100% pass rate (36 unit tests) memvalidasi kalkulasi terhadap contoh numerik BTC 20x Long dari Section 6 `SIMULATION_ENGINE.md`.
+  - [x] Zustand store `useWalletStore.ts` untuk manajemen ekuitas, margin terkunci, pemotongan fee, realized PnL, win/loss stats, dan faucet bailout.
+  - [x] Zustand store `useTradingStore.ts` untuk eksekusi order (Market/Limit, Long/Short), lifecycle posisi, update PnL real-time batch, dan riwayat trading.
+  - [x] High-frequency liquidation scanner `LiquidationEngine.ts` yang memantau tick harga real-time dan mengeksekusi force liquidation saat harga menyentuh threshold.
+  - [x] Simulated 8-hour funding rate engine `FundingRateEngine.ts` dengan countdown presisi dan settlement fee transfer.
+  - [x] Windows 98 Critical Error crash modal `LiquidationModal.tsx` dengan fitur emergency bailout faucet saat saldo kolaps di bawah 1.00 USDT.
 
 ---
 
