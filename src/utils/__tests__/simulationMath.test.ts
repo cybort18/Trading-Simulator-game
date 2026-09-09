@@ -9,6 +9,9 @@ import {
   calculateFee,
   calculateSlippagePrice,
   roundToDecimals,
+  roundCurrency,
+  roundQuantity,
+  evaluateCrossMarginPortfolio,
   MAINTENANCE_MARGIN_RATES,
   DEFAULT_TAKER_FEE_RATE,
   DEFAULT_MAKER_FEE_RATE,
@@ -312,6 +315,95 @@ describe('Financial Mathematics & Simulation Engine Core', () => {
       expect(roundToDecimals(57315.2337858, 2)).toBe(57315.23);
       expect(roundToDecimals(0.00166667, 4)).toBe(0.0017);
       expect(roundToDecimals(100.0, 2)).toBe(100);
+    });
+
+    it('roundCurrency eliminates floating-point drift and dust balances', () => {
+      // 0.1 + 0.2 in JS is 0.30000000000000004
+      expect(roundCurrency(0.1 + 0.2)).toBe(0.3);
+      // Floating dust < 0.0001 clamps to 0
+      expect(roundCurrency(0.00000000004)).toBe(0);
+      expect(roundCurrency(-0.00000000004)).toBe(0);
+      expect(roundCurrency(4.950000000000001)).toBe(4.95);
+    });
+
+    it('roundQuantity normalizes crypto contract sizes without micro-residuals', () => {
+      expect(roundQuantity(0.0016666666666666668, 6)).toBe(0.001667);
+      expect(roundQuantity(1e-12, 6)).toBe(0);
+    });
+  });
+
+  describe('Portfolio-Level Cross Margin Multi-Position Evaluation', () => {
+    it('evaluates safe portfolio with multiple cross positions', () => {
+      const crossPositions = [
+        {
+          pair: 'BTCUSDT',
+          direction: 'LONG' as const,
+          entryPrice: 60000,
+          quantity: 0.001,
+          initialMargin: 5.0,
+        },
+        {
+          pair: 'ETHUSDT',
+          direction: 'LONG' as const,
+          entryPrice: 3000,
+          quantity: 0.02,
+          initialMargin: 5.0,
+        },
+      ];
+
+      const markPrices = {
+        BTCUSDT: 61000, // +$1 uPnL
+        ETHUSDT: 3100,  // +$2 uPnL
+      };
+
+      const result = evaluateCrossMarginPortfolio({
+        crossPositions,
+        markPrices,
+        walletAvailableBalance: 10.0,
+      });
+
+      expect(result.isLiquidated).toBe(false);
+      // Total equity: 10 (avail) + 10 (margin) + 3 (uPnL) = 23 USDT
+      expect(result.totalCrossEquity).toBe(23.0);
+      expect(result.marginRatio).toBeLessThan(10);
+    });
+
+    it('triggers portfolio liquidation when adverse moves wipe cross equity below maintenance margin', () => {
+      const crossPositions = [
+        {
+          pair: 'BTCUSDT',
+          direction: 'LONG' as const,
+          entryPrice: 60000,
+          quantity: 0.005, // $300 notional at 30x with 10 margin
+          initialMargin: 10.0,
+        },
+        {
+          pair: 'ETHUSDT',
+          direction: 'LONG' as const,
+          entryPrice: 3000,
+          quantity: 0.1, // $300 notional at 30x with 10 margin
+          initialMargin: 10.0,
+        },
+      ];
+
+      // Severe crash on both assets:
+      // BTC drops to $55,000 -> uPnL = 0.005 * (55000 - 60000) = -25 USDT
+      // ETH drops to $2,800  -> uPnL = 0.1 * (2800 - 3000) = -20 USDT
+      // Total uPnL = -45 USDT
+      const markPrices = {
+        BTCUSDT: 55000,
+        ETHUSDT: 2800,
+      };
+
+      const result = evaluateCrossMarginPortfolio({
+        crossPositions,
+        markPrices,
+        walletAvailableBalance: 5.0, // only 5 USDT available margin buffer
+      });
+
+      // Total equity: 5 (avail) + 20 (initialMargin) - 45 (uPnL) = -20 USDT <= total MM (~4.2 USDT)
+      expect(result.isLiquidated).toBe(true);
+      expect(result.totalCrossEquity).toBe(-20.0);
     });
   });
 });

@@ -194,3 +194,87 @@ export function roundToDecimals(val: number, decimals: number = 2): number {
   const factor = Math.pow(10, decimals);
   return Math.round((val + Number.EPSILON) * factor) / factor;
 }
+
+/**
+ * Normalizes currency values (USDT) to 2 decimal places with EPSILON protection.
+ * Automatically eliminates micro-dust artifacts (e.g. 0.000000001 or 4.950000000000001).
+ * Clamps dust values with magnitude < 0.0001 to 0.
+ */
+export function roundCurrency(val: number): number {
+  if (Math.abs(val) < 0.0001) return 0;
+  return Math.round((val + Number.EPSILON) * 100) / 100;
+}
+
+/**
+ * Normalizes crypto contract quantities to standard asset decimals (default 6).
+ */
+export function roundQuantity(val: number, decimals: number = 6): number {
+  if (Math.abs(val) < 1e-9) return 0;
+  const factor = Math.pow(10, decimals);
+  return Math.round((val + Number.EPSILON) * factor) / factor;
+}
+
+export interface CrossMarginRiskEvaluation {
+  isLiquidated: boolean;
+  totalCrossEquity: number;
+  totalRequiredMaintenanceMargin: number;
+  marginRatio: number;
+}
+
+/**
+ * Evaluates portfolio-level Cross Margin risk across multiple open cross positions.
+ * Strictly adheres to SIMULATION_ENGINE.md Section 4:
+ * Total Account Equity = Available Margin + Sum(Initial Margin) + Sum(uPnL)
+ * Liquidation triggers when: Total Account Equity <= Sum(Maintenance Margin)
+ */
+export function evaluateCrossMarginPortfolio(params: {
+  crossPositions: Array<{
+    direction: PositionDirection;
+    entryPrice: number;
+    quantity: number;
+    initialMargin: number;
+    pair: string;
+  }>;
+  markPrices: Record<string, number>;
+  walletAvailableBalance: number;
+}): CrossMarginRiskEvaluation {
+  const { crossPositions, markPrices, walletAvailableBalance } = params;
+
+  if (crossPositions.length === 0) {
+    return {
+      isLiquidated: false,
+      totalCrossEquity: walletAvailableBalance,
+      totalRequiredMaintenanceMargin: 0,
+      marginRatio: 0,
+    };
+  }
+
+  let totalInitialMargin = 0;
+  let totalUpnl = 0;
+  let totalMaintenanceMargin = 0;
+
+  for (const pos of crossPositions) {
+    const markPrice = markPrices[pos.pair] || pos.entryPrice;
+    const upnl = calculateUnrealizedPnl(pos.direction, pos.entryPrice, markPrice, pos.quantity);
+    const mmr = MAINTENANCE_MARGIN_RATES[pos.pair] ?? DEFAULT_MMR;
+    const mm = calculateMaintenanceMargin(pos.quantity, markPrice, mmr);
+
+    totalInitialMargin += pos.initialMargin;
+    totalUpnl += upnl;
+    totalMaintenanceMargin += mm;
+  }
+
+  const totalCrossEquity = walletAvailableBalance + totalInitialMargin + totalUpnl;
+  const isLiquidated = totalCrossEquity <= totalMaintenanceMargin;
+  const marginRatio = totalCrossEquity > 0
+    ? (totalMaintenanceMargin / totalCrossEquity) * 100
+    : 100;
+
+  return {
+    isLiquidated,
+    totalCrossEquity: roundCurrency(totalCrossEquity),
+    totalRequiredMaintenanceMargin: roundCurrency(totalMaintenanceMargin),
+    marginRatio: roundToDecimals(marginRatio, 2),
+  };
+}
+

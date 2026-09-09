@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { safeStateStorage } from '@/utils/safeStorage';
+import { roundCurrency } from '@/utils/simulationMath';
 
 export interface WalletState {
   equity: number;
@@ -48,8 +49,8 @@ export const useWalletStore = create<WalletState>()(
           return false;
         }
         set({
-          availableMargin: Math.max(0, state.availableMargin - amount),
-          lockedMargin: state.lockedMargin + amount,
+          availableMargin: roundCurrency(Math.max(0, state.availableMargin - amount)),
+          lockedMargin: roundCurrency(state.lockedMargin + amount),
         });
         return true;
       },
@@ -58,16 +59,16 @@ export const useWalletStore = create<WalletState>()(
         const state = get();
         const unlockAmount = Math.min(state.lockedMargin, Math.max(0, amount));
         set({
-          lockedMargin: Math.max(0, state.lockedMargin - unlockAmount),
-          availableMargin: state.availableMargin + unlockAmount,
+          lockedMargin: roundCurrency(Math.max(0, state.lockedMargin - unlockAmount)),
+          availableMargin: roundCurrency(state.availableMargin + unlockAmount),
         });
       },
 
       deductFee: (fee: number) => {
         if (fee <= 0) return;
         set((state) => {
-          const newAvail = Math.max(0, state.availableMargin - fee);
-          const newEquity = Math.max(0, state.equity - fee);
+          const newAvail = roundCurrency(Math.max(0, state.availableMargin - fee));
+          const newEquity = roundCurrency(Math.max(0, state.equity - fee));
           return {
             availableMargin: newAvail,
             equity: newEquity,
@@ -78,11 +79,11 @@ export const useWalletStore = create<WalletState>()(
       recordTradeResult: (pnl: number, returnedMargin: number) => {
         set((state) => {
           // Release locked margin
-          const newLocked = Math.max(0, state.lockedMargin - returnedMargin);
+          const newLocked = roundCurrency(Math.max(0, state.lockedMargin - returnedMargin));
           // Credit returned margin + pnl into available margin
           const netReturn = returnedMargin + pnl;
-          const newAvail = Math.max(0, state.availableMargin + netReturn);
-          const newRealizedPnl = state.realizedPnl + pnl;
+          const newAvail = roundCurrency(Math.max(0, state.availableMargin + netReturn));
+          const newRealizedPnl = roundCurrency(state.realizedPnl + pnl);
           const newTotalTrades = state.totalTrades + 1;
           const newWinCount = pnl > 0 ? state.winCount + 1 : state.winCount;
           const newLossCount = pnl < 0 ? state.lossCount + 1 : state.lossCount;
@@ -90,7 +91,7 @@ export const useWalletStore = create<WalletState>()(
           return {
             lockedMargin: newLocked,
             availableMargin: newAvail,
-            equity: newAvail + newLocked,
+            equity: roundCurrency(newAvail + newLocked),
             realizedPnl: newRealizedPnl,
             totalTrades: newTotalTrades,
             winCount: newWinCount,
@@ -103,8 +104,8 @@ export const useWalletStore = create<WalletState>()(
         // Positive payment = trader pays funding (deduction)
         // Negative payment = trader receives funding (credit)
         set((state) => {
-          const newAvail = Math.max(0, state.availableMargin - payment);
-          const newEquity = Math.max(0, state.equity - payment);
+          const newAvail = roundCurrency(Math.max(0, state.availableMargin - payment));
+          const newEquity = roundCurrency(Math.max(0, state.equity - payment));
           return {
             availableMargin: newAvail,
             equity: newEquity,
@@ -114,7 +115,7 @@ export const useWalletStore = create<WalletState>()(
 
       recalculateEquity: (totalUnrealizedPnl: number) => {
         set((state) => ({
-          equity: Math.max(0, state.availableMargin + state.lockedMargin + totalUnrealizedPnl),
+          equity: roundCurrency(Math.max(0, state.availableMargin + state.lockedMargin + totalUnrealizedPnl)),
         }));
       },
 

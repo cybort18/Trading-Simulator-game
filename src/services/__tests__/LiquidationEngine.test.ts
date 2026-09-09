@@ -95,4 +95,53 @@ describe('LiquidationEngine', () => {
     expect(useTradingStore.getState().positions.length).toBe(0);
     expect(useTradingStore.getState().isLiquidationModalOpen).toBe(true);
   });
+
+  it('triggers portfolio liquidation for multi-position cross margin when aggregated equity is depleted', () => {
+    // Start with limited wallet balance (10 USDT)
+    useWalletStore.getState().resetWallet(10.00);
+
+    // Open Cross Long on BTC (margin 4 USDT)
+    const pos1 = useTradingStore.getState().openPosition(
+      {
+        pair: 'BTCUSDT',
+        direction: 'LONG',
+        marginMode: 'CROSS',
+        leverage: 20,
+        margin: 4.0,
+        type: 'LIMIT',
+        limitPrice: 60000.0,
+      },
+      60000.0
+    );
+    expect(pos1.success).toBe(true);
+
+    // Open Cross Long on ETH (margin 4 USDT)
+    const pos2 = useTradingStore.getState().openPosition(
+      {
+        pair: 'ETHUSDT',
+        direction: 'LONG',
+        marginMode: 'CROSS',
+        leverage: 20,
+        margin: 4.0,
+        type: 'LIMIT',
+        limitPrice: 3000.0,
+      },
+      3000.0
+    );
+    expect(pos2.success).toBe(true);
+    expect(useTradingStore.getState().positions.length).toBe(2);
+
+    // Severe adverse market movement on both assets that wipes combined cross equity
+    const tickers: Record<TradingPair, { price: number }> = {
+      BTCUSDT: { price: 55000.0 }, // severe loss
+      ETHUSDT: { price: 2700.0 },  // severe loss
+      SOLUSDT: { price: 150.0 },
+    };
+
+    const liquidated = liquidationEngine.evaluateTicks(tickers);
+    // Both cross positions liquidated together due to aggregate equity depletion
+    expect(liquidated.length).toBe(2);
+    expect(useTradingStore.getState().positions.length).toBe(0);
+  });
 });
+
