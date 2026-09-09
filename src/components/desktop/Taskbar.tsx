@@ -162,12 +162,12 @@ export const Taskbar: React.FC = () => {
       {/* =================================================================== */}
       <nav className="fixed bottom-0 left-0 right-0 h-taskbar-height bg-win-base border-t-2 border-bevel-highlight border-b border-bevel-dark flex items-center justify-between px-1 z-50 select-none font-ui text-[11px]">
         {/* Left Section: Start Button + Window Tabs */}
-        <div className="flex items-center space-x-1 overflow-hidden">
+        <div className="flex-1 min-w-0 flex items-center space-x-1 overflow-hidden mr-2">
           {/* Classic Start Button */}
           <button
             id="start-button"
             onClick={() => setIsStartOpen(!isStartOpen)}
-            className={`px-2 py-1 flex items-center space-x-1.5 font-bold text-black ${
+            className={`px-2 py-1 flex items-center space-x-1.5 font-bold text-black flex-shrink-0 ${
               isStartOpen ? 'win-btn-pressed bg-win-pressed' : 'win-btn bg-win-base'
             }`}
           >
@@ -182,10 +182,10 @@ export const Taskbar: React.FC = () => {
           </button>
 
           {/* Divider */}
-          <div className="h-5 w-[2px] bg-bevel-shadow mx-1 border-r border-bevel-highlight"></div>
+          <div className="h-5 w-[2px] bg-bevel-shadow mx-1 border-r border-bevel-highlight flex-shrink-0"></div>
 
           {/* Opened Window Tabs */}
-          <div className="flex items-center space-x-1 overflow-x-auto">
+          <div className="flex-1 min-w-0 flex items-center space-x-1 overflow-hidden no-scrollbar h-[28px]">
             {(Object.keys(windows) as WindowId[])
               .filter((id) => windows[id].isOpen)
               .map((id) => {
@@ -196,14 +196,17 @@ export const Taskbar: React.FC = () => {
                   <button
                     key={id}
                     onClick={() => handleTabClick(id)}
-                    className={`px-2 py-1 flex items-center space-x-1.5 max-w-[180px] text-black ${
+                    title={w.title}
+                    className={`px-2 h-[26px] flex items-center space-x-1.5 flex-1 min-w-[48px] max-w-[160px] text-black text-left select-none overflow-hidden ${
                       isTabActive
                         ? 'win-btn-pressed bg-win-pressed font-bold'
                         : 'win-btn bg-win-base font-normal'
                     }`}
                   >
                     <PixelIcon name={w.icon} size={13} className="flex-shrink-0" />
-                    <span className="truncate text-[10px] leading-none">{w.title.split(' - ')[0]}</span>
+                    <span className="truncate text-[10px] leading-tight block flex-1">
+                      {w.title.split(' - ')[0]}
+                    </span>
                   </button>
                 );
               })}
