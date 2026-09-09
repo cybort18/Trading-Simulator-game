@@ -220,10 +220,12 @@ export const useWindowStore = create<WindowStoreState>((set, get) => ({
     const target = windows[id];
     if (!target) return;
 
-    // Viewport clamping
+    // Viewport clamping with SSR/test environment safety
+    const innerHeight = typeof window !== 'undefined' && window.innerHeight ? window.innerHeight : 800;
+    const innerWidth = typeof window !== 'undefined' && window.innerWidth ? window.innerWidth : 1200;
     const taskbarHeight = 36;
-    const clampedY = Math.max(0, Math.min(position.y, window.innerHeight - taskbarHeight - 24));
-    const clampedX = Math.max(-target.size.width + 100, Math.min(position.x, window.innerWidth - 80));
+    const clampedY = Math.max(0, Math.min(position.y, innerHeight - taskbarHeight - 24));
+    const clampedX = Math.max(-target.size.width + 100, Math.min(position.x, innerWidth - 80));
 
     set({
       windows: {
@@ -241,8 +243,10 @@ export const useWindowStore = create<WindowStoreState>((set, get) => ({
     const target = windows[id];
     if (!target) return;
 
-    const clampedWidth = Math.max(360, Math.min(size.width, window.innerWidth));
-    const clampedHeight = Math.max(220, Math.min(size.height, window.innerHeight - 36));
+    const innerHeight = typeof window !== 'undefined' && window.innerHeight ? window.innerHeight : 800;
+    const innerWidth = typeof window !== 'undefined' && window.innerWidth ? window.innerWidth : 1200;
+    const clampedWidth = Math.max(360, Math.min(size.width, innerWidth));
+    const clampedHeight = Math.max(220, Math.min(size.height, innerHeight - 36));
 
     set({
       windows: {

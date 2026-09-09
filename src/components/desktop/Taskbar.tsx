@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useWindowStore } from '@/stores/useWindowStore';
 import { useMarketDataStore } from '@/stores/useMarketDataStore';
+import { useWalletStore } from '@/stores/useWalletStore';
 import { WindowId } from '@/types/window';
 import { PixelIcon } from '@/components/common/PixelIcon';
 
@@ -13,6 +14,7 @@ export const Taskbar: React.FC = () => {
 
   const connectionStatus = useMarketDataStore((state) => state.connectionStatus);
   const pingLatency = useMarketDataStore((state) => state.pingLatency);
+  const equity = useWalletStore((state) => state.equity);
 
   const [isStartOpen, setIsStartOpen] = useState(false);
   const [timeStr, setTimeStr] = useState('');
@@ -239,9 +241,9 @@ export const Taskbar: React.FC = () => {
 
           {/* Quick Balance */}
           <div className="border-l border-bevel-shadow pl-2 flex items-center space-x-1 font-bold">
-            <span className="text-bevel-shadow font-normal">BAL:</span>
-            <span className="text-titlebar-navy">16.71</span>
-            <span className="text-[8px] text-bevel-shadow">USDT</span>
+            <span className="text-[#333] font-semibold">BAL:</span>
+            <span className="text-titlebar-navy">${equity.toFixed(2)}</span>
+            <span className="text-[8px] text-[#444]">USDT</span>
           </div>
 
           {/* Audio Speaker Icon Toggle */}

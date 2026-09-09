@@ -29,17 +29,11 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const dragOffsetRef = useRef<{ offsetX: number; offsetY: number }>({ offsetX: 0, offsetY: 0 });
 
-  if (!windowState || !windowState.isOpen) {
-    return null;
-  }
-
-  const isActive = activeWindowId === id;
-  const isMinimized = windowState.isMinimized;
-  const isMaximized = windowState.isMaximized;
+  const isMaximized = windowState?.isMaximized ?? false;
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     // Only left click initiates dragging
-    if (e.button !== 0) return;
+    if (e.button !== 0 || !windowState) return;
     focusWindow(id);
 
     if (isMaximized) return; // Cannot drag maximized window
@@ -81,9 +75,12 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
     return () => window.removeEventListener('pointerup', handleGlobalUp);
   }, []);
 
-  if (isMinimized) {
+  // Safe early return ONLY after all hooks are executed
+  if (!windowState || !windowState.isOpen || windowState.isMinimized) {
     return null;
   }
+
+  const isActive = activeWindowId === id;
 
   const windowStyle: React.CSSProperties = isMaximized
     ? {

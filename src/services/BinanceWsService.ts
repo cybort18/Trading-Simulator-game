@@ -1,5 +1,6 @@
 import { TradingPair, CandleData } from '@/types/market';
 import { useMarketDataStore } from '@/stores/useMarketDataStore';
+import { sanitizeKlinePayload, sanitizeHistoricalKlines } from '@/utils/binanceDataSanitizer';
 
 export class BinanceWsService {
   private static instance: BinanceWsService | null = null;
@@ -91,30 +92,38 @@ export class BinanceWsService {
       if (stream.includes('@ticker')) {
         const symbol = data.s as TradingPair;
         if (symbol === 'BTCUSDT' || symbol === 'ETHUSDT' || symbol === 'SOLUSDT') {
-          useMarketDataStore.getState().updateTicker(symbol, {
-            price: parseFloat(data.c),
-            high24h: parseFloat(data.h),
-            low24h: parseFloat(data.l),
-            volume24h: parseFloat(data.v),
-            change24h: parseFloat(data.P),
-          });
+          const price = parseFloat(data.c);
+          const high24h = parseFloat(data.h);
+          const low24h = parseFloat(data.l);
+          const volume24h = parseFloat(data.v);
+          const change24h = parseFloat(data.P);
+
+          if (
+            Number.isFinite(price) &&
+            Number.isFinite(high24h) &&
+            Number.isFinite(low24h) &&
+            Number.isFinite(volume24h) &&
+            Number.isFinite(change24h)
+          ) {
+            useMarketDataStore.getState().updateTicker(symbol, {
+              price,
+              high24h,
+              low24h,
+              volume24h,
+              change24h,
+            });
+          }
         }
       }
 
       // 2. @kline Stream
       else if (stream.includes('@kline')) {
         const symbol = data.s as TradingPair;
-        const k = data.k;
-        if ((symbol === 'BTCUSDT' || symbol === 'ETHUSDT' || symbol === 'SOLUSDT') && k) {
-          const candle: CandleData = {
-            time: Math.floor(k.t / 1000),
-            open: parseFloat(k.o),
-            high: parseFloat(k.h),
-            low: parseFloat(k.l),
-            close: parseFloat(k.c),
-            volume: parseFloat(k.v),
-          };
-          useMarketDataStore.getState().updateLatestCandle(symbol, candle);
+        if ((symbol === 'BTCUSDT' || symbol === 'ETHUSDT' || symbol === 'SOLUSDT') && data.k) {
+          const sanitized = sanitizeKlinePayload(data.k);
+          if (sanitized) {
+            useMarketDataStore.getState().updateLatestCandle(symbol, sanitized);
+          }
         }
       }
 
@@ -122,12 +131,18 @@ export class BinanceWsService {
       else if (stream.includes('@markPrice')) {
         const symbol = data.s as TradingPair;
         if (symbol === 'BTCUSDT' || symbol === 'ETHUSDT' || symbol === 'SOLUSDT') {
-          useMarketDataStore.getState().updateMarkPrice(
-            symbol,
-            parseFloat(data.p),
-            parseFloat(data.r),
-            data.T
-          );
+          const markPrice = parseFloat(data.p);
+          const fundingRate = parseFloat(data.r);
+          const nextFundingTime = Number(data.T);
+
+          if (Number.isFinite(markPrice) && Number.isFinite(fundingRate)) {
+            useMarketDataStore.getState().updateMarkPrice(
+              symbol,
+              markPrice,
+              fundingRate,
+              Number.isFinite(nextFundingTime) ? nextFundingTime : Date.now() + 8 * 3600 * 1000
+            );
+          }
         }
       }
     } catch (e) {
@@ -176,7 +191,7 @@ export class BinanceWsService {
   }
 
   /**
-   * Fetches historical 1m klines for initial chart hydration.
+   * Fetches historical klines for initial chart hydration.
    * Includes fallback generator if network or CORS restrictions block public API.
    */
   public async fetchHistoricalKlines(
@@ -191,14 +206,11 @@ export class BinanceWsService {
         throw new Error(`HTTP Error ${response.status}`);
       }
       const raw = await response.json();
-      return raw.map((item: (number | string)[]) => ({
-        time: Math.floor(Number(item[0]) / 1000),
-        open: parseFloat(String(item[1])),
-        high: parseFloat(String(item[2])),
-        low: parseFloat(String(item[3])),
-        close: parseFloat(String(item[4])),
-        volume: parseFloat(String(item[5])),
-      }));
+      const sanitized = sanitizeHistoricalKlines(raw);
+      if (sanitized.length > 0) {
+        return sanitized;
+      }
+      throw new Error('No valid klines in response');
     } catch (err) {
       console.warn(`Binance REST klines fetch failed for ${symbol}, generating smooth historical baseline:`, err);
       return this.generateFallbackHistoricalCandles(symbol, limit);
@@ -208,7 +220,8 @@ export class BinanceWsService {
   private generateFallbackHistoricalCandles(symbol: TradingPair, count: number): CandleData[] {
     const basePrice =
       symbol === 'BTCUSDT' ? 64000 : symbol === 'ETHUSDT' ? 3480 : 145;
-    const now = Math.floor(Date.now() / 1000);
+    // Align now to minute boundary in seconds
+    const now = Math.floor(Date.now() / 60000) * 60;
     const candles: CandleData[] = [];
 
     let currentPrice = basePrice;

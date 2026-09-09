@@ -49,7 +49,7 @@ export const LiquidationModal: React.FC = () => {
               <h3 className="font-bold text-sm text-red-800">
                 Position Liquidation Executed
               </h3>
-              <p className="text-xs text-win-dark">
+              <p className="text-xs text-black font-medium leading-relaxed">
                 The market price reached your liquidation threshold. Your allocated initial margin has been completely absorbed by the exchange liquidation pool.
               </p>
             </div>
@@ -58,26 +58,26 @@ export const LiquidationModal: React.FC = () => {
           {/* Audit Metrics Inset */}
           <div className="win-inset bg-black p-3 font-mono text-xs space-y-1.5 text-crt-green">
             <div className="flex justify-between">
-              <span className="text-gray-400">CONTRACT:</span>
+              <span className="text-[#D0D0D0] font-semibold">CONTRACT:</span>
               <span className="font-bold text-white">{latestLiq.position.pair}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">DIRECTION:</span>
-              <span className={latestLiq.position.direction === 'LONG' ? 'text-green-400' : 'text-red-400'}>
+              <span className="text-[#D0D0D0] font-semibold">DIRECTION:</span>
+              <span className={`font-bold ${latestLiq.position.direction === 'LONG' ? 'text-[#00FF66]' : 'text-[#FF4444]'}`}>
                 {latestLiq.position.direction} ({latestLiq.position.leverage}x)
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">TRIGGER PRICE:</span>
-              <span className="text-crt-amber">${latestLiq.liquidationPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span className="text-[#D0D0D0] font-semibold">TRIGGER PRICE:</span>
+              <span className="text-crt-amber font-bold">${latestLiq.liquidationPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">WIPED MARGIN:</span>
-              <span className="text-red-500 font-bold">-${latestLiq.wipedMargin.toFixed(2)} USDT</span>
+              <span className="text-[#D0D0D0] font-semibold">WIPED MARGIN:</span>
+              <span className="text-[#FF3333] font-bold">-${latestLiq.wipedMargin.toFixed(2)} USDT</span>
             </div>
             <div className="flex justify-between border-t border-gray-800 pt-1">
-              <span className="text-gray-400">ACCOUNT EQUITY:</span>
-              <span className={equity < 1.00 ? 'text-red-500 font-bold' : 'text-white'}>
+              <span className="text-[#D0D0D0] font-semibold">ACCOUNT EQUITY:</span>
+              <span className={equity < 1.00 ? 'text-[#FF3333] font-bold' : 'text-white font-bold'}>
                 ${equity.toFixed(2)} USDT
               </span>
             </div>

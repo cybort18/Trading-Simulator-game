@@ -118,45 +118,45 @@ export const DegenVaultWindow: React.FC = () => {
 
           {/* Top 3 Metrics Cards */}
           <div className="grid grid-cols-3 gap-2 py-0.5">
-            <div className="win-inset bg-[#181818] p-1.5 border border-[#262626]">
-              <span className="block font-mono text-[9px] text-[#888]">TOTAL EQUITY</span>
+            <div className="win-inset bg-[#181818] p-2 border border-[#262626]">
+              <span className="block font-mono text-[10px] font-semibold text-[#D0D0D0]">TOTAL EQUITY</span>
               <span className="font-mono text-[18px] font-bold text-crt-bullish">
                 ${equity.toFixed(2)}
               </span>
-              <span className="block font-mono text-[8px] text-crt-bullish">USDT Reserve</span>
+              <span className="block font-mono text-[9px] text-crt-bullish font-semibold">USDT Reserve</span>
             </div>
 
-            <div className="win-inset bg-[#181818] p-1.5 border border-[#262626]">
-              <span className="block font-mono text-[9px] text-[#888]">AVAILABLE MARGIN</span>
+            <div className="win-inset bg-[#181818] p-2 border border-[#262626]">
+              <span className="block font-mono text-[10px] font-semibold text-[#D0D0D0]">AVAILABLE MARGIN</span>
               <span className="font-mono text-[18px] font-bold text-white">
                 ${availMargin.toFixed(2)}
               </span>
-              <span className="block font-mono text-[8px] text-[#888]">Free for orders</span>
+              <span className="block font-mono text-[9px] text-[#C0C0C0]">Free for orders</span>
             </div>
 
-            <div className="win-inset bg-[#181818] p-1.5 border border-[#262626]">
-              <span className="block font-mono text-[9px] text-[#888]">LOCKED MARGIN</span>
+            <div className="win-inset bg-[#181818] p-2 border border-[#262626]">
+              <span className="block font-mono text-[10px] font-semibold text-[#D0D0D0]">LOCKED MARGIN</span>
               <span className="font-mono text-[18px] font-bold text-crt-amber">
                 ${lockedMargin.toFixed(2)}
               </span>
-              <span className="block font-mono text-[8px] text-crt-amber">Active Positions</span>
+              <span className="block font-mono text-[9px] text-crt-amber font-semibold">Active Positions</span>
             </div>
           </div>
 
           {/* Performance Breakdown Row */}
           <div className="grid grid-cols-3 gap-2 pt-1 border-t border-[#333] font-mono text-[10px]">
-            <div className="flex justify-between items-center bg-[#181818] px-2 py-1 border border-[#262626]">
-              <span className="text-[#888]">All-Time ROI:</span>
+            <div className="flex justify-between items-center bg-[#181818] px-2 py-1.5 border border-[#262626]">
+              <span className="text-[#D0D0D0] font-semibold">All-Time ROI:</span>
               <span className={`font-bold ${allTimeRoi >= 0 ? 'text-crt-bullish' : 'text-crt-bearish'}`}>
                 {allTimeRoi >= 0 ? '+' : ''}{allTimeRoi.toFixed(1)}% {allTimeRoi >= 0 ? '▲' : '▼'}
               </span>
             </div>
-            <div className="flex justify-between items-center bg-[#181818] px-2 py-1 border border-[#262626]">
-              <span className="text-[#888]">Win Rate:</span>
+            <div className="flex justify-between items-center bg-[#181818] px-2 py-1.5 border border-[#262626]">
+              <span className="text-[#D0D0D0] font-semibold">Win Rate:</span>
               <span className="text-[#76D6D5] font-bold">{winRate.toFixed(1)}% ({winCount}/{totalTrades})</span>
             </div>
-            <div className="flex justify-between items-center bg-[#181818] px-2 py-1 border border-[#262626]">
-              <span className="text-[#888]">Total Trades:</span>
+            <div className="flex justify-between items-center bg-[#181818] px-2 py-1.5 border border-[#262626]">
+              <span className="text-[#D0D0D0] font-semibold">Total Trades:</span>
               <span className="text-white font-bold">{totalTrades} Executed</span>
             </div>
           </div>
@@ -186,7 +186,7 @@ export const DegenVaultWindow: React.FC = () => {
                 <span>Reset Wallet</span>
               </button>
             </div>
-            <span className="font-mono text-[8px] text-[#888]">SIMULATED FUNDS • ZERO REAL RISK</span>
+            <span className="font-mono text-[9px] text-[#C0C0C0]">SIMULATED FUNDS • ZERO REAL RISK</span>
           </div>
         </div>
 
@@ -208,7 +208,7 @@ export const DegenVaultWindow: React.FC = () => {
           <div className="grid grid-cols-7 gap-1">
             {/* Day 1: Claimed */}
             <div className="win-inset bg-surface-high p-1 flex flex-col items-center text-center opacity-85">
-              <span className="font-mono text-[8px] text-bevel-shadow">DAY 1</span>
+              <span className="font-mono text-[8px] text-[#333] font-bold">DAY 1</span>
               <PixelIcon name="check" size={16} className="text-crt-bullish my-0.5" />
               <span className="font-mono font-bold text-[9px] text-[#006622]">+2 USDT</span>
               <span className="font-mono text-[7px] text-[#006622] font-bold">Claimed ✓</span>
@@ -239,39 +239,39 @@ export const DegenVaultWindow: React.FC = () => {
             </div>
 
             {/* Day 3: Locked */}
-            <div className="win-inset bg-surface-high p-1 flex flex-col items-center text-center text-bevel-shadow">
-              <span className="font-mono text-[8px]">DAY 3</span>
-              <PixelIcon name="lock" size={16} className="text-bevel-shadow my-0.5" />
-              <span className="font-mono font-bold text-[9px]">+8 USDT</span>
-              <span className="font-mono text-[7px]">Locked</span>
+            <div className="win-inset bg-surface-high p-1 flex flex-col items-center text-center text-[#404040]">
+              <span className="font-mono text-[8px] font-bold">DAY 3</span>
+              <PixelIcon name="lock" size={16} className="text-[#555] my-0.5" />
+              <span className="font-mono font-bold text-[9px] text-black">+8 USDT</span>
+              <span className="font-mono text-[7px] text-[#666] font-semibold">Locked</span>
             </div>
 
             {/* Day 4: Locked */}
-            <div className="win-inset bg-surface-high p-1 flex flex-col items-center text-center text-bevel-shadow">
-              <span className="font-mono text-[8px]">DAY 4</span>
-              <PixelIcon name="lock" size={16} className="text-bevel-shadow my-0.5" />
-              <span className="font-mono font-bold text-[9px]">+10 USDT</span>
-              <span className="font-mono text-[7px]">Locked</span>
+            <div className="win-inset bg-surface-high p-1 flex flex-col items-center text-center text-[#404040]">
+              <span className="font-mono text-[8px] font-bold">DAY 4</span>
+              <PixelIcon name="lock" size={16} className="text-[#555] my-0.5" />
+              <span className="font-mono font-bold text-[9px] text-black">+10 USDT</span>
+              <span className="font-mono text-[7px] text-[#666] font-semibold">Locked</span>
             </div>
 
             {/* Day 5: Locked */}
-            <div className="win-inset bg-surface-high p-1 flex flex-col items-center text-center text-bevel-shadow">
-              <span className="font-mono text-[8px]">DAY 5</span>
-              <PixelIcon name="lock" size={16} className="text-bevel-shadow my-0.5" />
-              <span className="font-mono font-bold text-[9px]">+15 USDT</span>
-              <span className="font-mono text-[7px]">Locked</span>
+            <div className="win-inset bg-surface-high p-1 flex flex-col items-center text-center text-[#404040]">
+              <span className="font-mono text-[8px] font-bold">DAY 5</span>
+              <PixelIcon name="lock" size={16} className="text-[#555] my-0.5" />
+              <span className="font-mono font-bold text-[9px] text-black">+15 USDT</span>
+              <span className="font-mono text-[7px] text-[#666] font-semibold">Locked</span>
             </div>
 
             {/* Day 6: Locked */}
-            <div className="win-inset bg-surface-high p-1 flex flex-col items-center text-center text-bevel-shadow">
-              <span className="font-mono text-[8px]">DAY 6</span>
-              <PixelIcon name="lock" size={16} className="text-bevel-shadow my-0.5" />
-              <span className="font-mono font-bold text-[9px]">+25 USDT</span>
-              <span className="font-mono text-[7px]">Locked</span>
+            <div className="win-inset bg-surface-high p-1 flex flex-col items-center text-center text-[#404040]">
+              <span className="font-mono text-[8px] font-bold">DAY 6</span>
+              <PixelIcon name="lock" size={16} className="text-[#555] my-0.5" />
+              <span className="font-mono font-bold text-[9px] text-black">+25 USDT</span>
+              <span className="font-mono text-[7px] text-[#666] font-semibold">Locked</span>
             </div>
 
             {/* Day 7: Locked + Mystery Box */}
-            <div className="win-inset bg-surface-high p-1 flex flex-col items-center text-center text-bevel-shadow">
+            <div className="win-inset bg-surface-high p-1 flex flex-col items-center text-center text-[#404040]">
               <span className="font-mono text-[8px] text-titlebar-navy font-bold">DAY 7</span>
               <PixelIcon name="gift" size={16} className="text-titlebar-navy my-0.5" />
               <span className="font-mono font-bold text-[8px] text-black">+50 USDT</span>

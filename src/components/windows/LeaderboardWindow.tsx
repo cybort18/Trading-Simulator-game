@@ -61,8 +61,8 @@ export const LeaderboardWindow: React.FC = () => {
             </button>
           </div>
 
-          <div className="flex items-center space-x-1 font-mono text-[9px]">
-            <span className="text-bevel-shadow">Season:</span>
+          <div className="flex items-center space-x-1 font-mono text-[10px]">
+            <span className="text-black font-bold">Season:</span>
             <span className="win-inset bg-white px-1.5 py-0.2 font-bold text-black">
               Season 01 (Ends in 3d 14h)
             </span>
@@ -74,16 +74,16 @@ export const LeaderboardWindow: React.FC = () => {
           {/* #2 Silver */}
           <div className="win-inset bg-win-base p-1.5 flex items-center space-x-2">
             <div className="w-9 h-9 win-outset bg-surface-high flex flex-col items-center justify-center font-bold text-[11px]">
-              <span className="text-bevel-shadow">#2</span>
+              <span className="text-[#333] font-bold">#2</span>
               <span className="text-[12px] leading-none">🥈</span>
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex justify-between items-center">
-                <span className="font-bold text-[11px] truncate">GigaTrader_X</span>
-                <span className="win-inset bg-white px-1 text-[8px] text-titlebar-navy font-mono">Slayer</span>
+                <span className="font-bold text-[11px] truncate text-black">GigaTrader_X</span>
+                <span className="win-inset bg-white px-1 text-[8px] text-titlebar-navy font-mono font-bold">Slayer</span>
               </div>
               <div className="font-mono text-[13px] font-bold text-[#008531]">+890.2% ROI</div>
-              <div className="text-[9px] font-mono text-bevel-shadow">Profit: +$18,420.00</div>
+              <div className="text-[10px] font-mono text-[#333] font-semibold">Profit: +$18,420.00</div>
             </div>
           </div>
 
@@ -95,27 +95,27 @@ export const LeaderboardWindow: React.FC = () => {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex justify-between items-center">
-                <span className="font-extrabold text-[12px] truncate">ChadWhale_69</span>
+                <span className="font-extrabold text-[12px] truncate text-black">ChadWhale_69</span>
                 <span className="win-outset bg-crt-amber text-black px-1 text-[8px] font-bold">Whale</span>
               </div>
               <div className="font-mono text-[14px] font-bold text-[#008531]">+1,420.5% ROI</div>
-              <div className="text-[9px] font-mono text-black font-bold">Profit: +$42,850.00</div>
+              <div className="text-[10px] font-mono text-black font-bold">Profit: +$42,850.00</div>
             </div>
           </div>
 
           {/* #3 Bronze */}
           <div className="win-inset bg-win-base p-1.5 flex items-center space-x-2">
             <div className="w-9 h-9 win-outset bg-surface-high flex flex-col items-center justify-center font-bold text-[11px]">
-              <span className="text-[#995522]">#3</span>
+              <span className="text-[#995522] font-bold">#3</span>
               <span className="text-[12px] leading-none">🥉</span>
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex justify-between items-center">
-                <span className="font-bold text-[11px] truncate">MoonOrDust</span>
-                <span className="win-inset bg-white px-1 text-[8px] text-bevel-shadow font-mono">Degen</span>
+                <span className="font-bold text-[11px] truncate text-black">MoonOrDust</span>
+                <span className="win-inset bg-white px-1 text-[8px] text-[#333] font-mono font-bold">Degen</span>
               </div>
               <div className="font-mono text-[13px] font-bold text-[#008531]">+654.8% ROI</div>
-              <div className="text-[9px] font-mono text-bevel-shadow">Profit: +$11,200.00</div>
+              <div className="text-[10px] font-mono text-[#333] font-semibold">Profit: +$11,200.00</div>
             </div>
           </div>
         </div>
@@ -123,7 +123,7 @@ export const LeaderboardWindow: React.FC = () => {
         {/* Data Grid Table */}
         <div className="flex-1 win-inset-deep bg-white flex flex-col overflow-hidden">
           {/* Header */}
-          <div className="grid grid-cols-12 bg-win-base text-black font-bold text-[10px] border-b border-bevel-shadow select-none">
+          <div className="grid grid-cols-12 bg-win-base text-black font-bold text-[11px] border-b-2 border-bevel-dark select-none">
             <div className="col-span-1 win-btn py-1 px-1 text-center">Rank</div>
             <div className="col-span-3 win-btn py-1 px-2 text-left">Trader Handle</div>
             <div className="col-span-2 win-btn py-1 px-1 text-left">Tier</div>
@@ -152,7 +152,7 @@ export const LeaderboardWindow: React.FC = () => {
                   {row.rank} {row.icon}
                 </div>
                 <div className="col-span-3 font-bold text-black truncate">{row.name}</div>
-                <div className="col-span-2 text-[9px] text-[#555]">{row.tier}</div>
+                <div className="col-span-2 text-[10px] text-[#333] font-medium">{row.tier}</div>
                 <div className="col-span-2 text-right font-bold text-black">{row.winRate}</div>
                 <div className="col-span-2 text-right font-bold text-[#008531]">{row.roi}</div>
                 <div className="col-span-2 text-right font-bold text-[#008531] pr-1">{row.pnl}</div>
@@ -167,7 +167,7 @@ export const LeaderboardWindow: React.FC = () => {
               <span>SatoshiDegen_98</span>
               <span className="win-outset bg-crt-amber text-black px-1 text-[8px] font-bold">YOU</span>
             </div>
-            <div className="col-span-2 text-[9px] text-[#DDD]">Novice Liquidator</div>
+            <div className="col-span-2 text-[10px] text-[#EEE] font-medium">Novice Liquidator</div>
             <div className="col-span-2 text-right font-bold">62.5%</div>
             <div className="col-span-2 text-right font-bold text-crt-bullish">+67.1%</div>
             <div className="col-span-2 text-right font-bold text-crt-bullish">+$6.71 USDT</div>

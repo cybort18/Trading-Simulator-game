@@ -3,6 +3,7 @@ import {
   createChart,
   ColorType,
   CrosshairMode,
+  PriceScaleMode,
   CandlestickSeries,
   IChartApi,
   ISeriesApi,
@@ -21,6 +22,7 @@ export const RetroCandleChart: React.FC<RetroCandleChartProps> = ({ pair, timefr
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
+  const lastCandleTimeRef = useRef<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Latest candle update from WebSocket store
@@ -31,6 +33,7 @@ export const RetroCandleChart: React.FC<RetroCandleChartProps> = ({ pair, timefr
     if (!chartContainerRef.current) return;
 
     setIsLoading(true);
+    lastCandleTimeRef.current = null;
 
     // Initialize Lightweight Chart with Retro CRT Palette
     const chart = createChart(chartContainerRef.current, {
@@ -56,6 +59,8 @@ export const RetroCandleChart: React.FC<RetroCandleChartProps> = ({ pair, timefr
       },
       rightPriceScale: {
         borderColor: '#333333',
+        autoScale: true,
+        mode: PriceScaleMode.Normal,
         scaleMargins: {
           top: 0.1,
           bottom: 0.1,
@@ -69,6 +74,11 @@ export const RetroCandleChart: React.FC<RetroCandleChartProps> = ({ pair, timefr
       borderVisible: false,
       wickUpColor: '#00FF66',
       wickDownColor: '#FF3333',
+      priceFormat: {
+        type: 'price',
+        precision: 2,
+        minMove: 0.01,
+      },
     });
 
     chartRef.current = chart;
@@ -98,6 +108,9 @@ export const RetroCandleChart: React.FC<RetroCandleChartProps> = ({ pair, timefr
             close: d.close,
           }));
           seriesRef.current.setData(formatted);
+          if (formatted.length > 0) {
+            lastCandleTimeRef.current = Number(formatted[formatted.length - 1].time);
+          }
           chart.timeScale().fitContent();
           setIsLoading(false);
         }
@@ -110,24 +123,42 @@ export const RetroCandleChart: React.FC<RetroCandleChartProps> = ({ pair, timefr
     return () => {
       isCancelled = true;
       resizeObserver.disconnect();
+      if (seriesRef.current) {
+        try {
+          seriesRef.current.setData([]);
+        } catch {
+          // Ignore unmount cleanup error
+        }
+      }
       chart.remove();
       chartRef.current = null;
       seriesRef.current = null;
+      lastCandleTimeRef.current = null;
     };
   }, [pair, timeframe]);
 
   // Real-time incremental candle update from WebSocket
   useEffect(() => {
-    if (!seriesRef.current || !latestCandle) return;
+    if (!seriesRef.current || !latestCandle || isLoading) return;
 
-    seriesRef.current.update({
-      time: latestCandle.time as Time,
-      open: latestCandle.open,
-      high: latestCandle.high,
-      low: latestCandle.low,
-      close: latestCandle.close,
-    });
-  }, [latestCandle]);
+    // Prevent updating with out-of-order or older timestamps which Lightweight Charts rejects
+    if (lastCandleTimeRef.current !== null && latestCandle.time < lastCandleTimeRef.current) {
+      return;
+    }
+
+    try {
+      seriesRef.current.update({
+        time: latestCandle.time as Time,
+        open: latestCandle.open,
+        high: latestCandle.high,
+        low: latestCandle.low,
+        close: latestCandle.close,
+      });
+      lastCandleTimeRef.current = latestCandle.time;
+    } catch (err) {
+      console.warn('Candle update skipped:', err);
+    }
+  }, [latestCandle, isLoading]);
 
   return (
     <div className="relative w-full h-full min-h-[220px]">

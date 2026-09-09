@@ -8,6 +8,7 @@ import { LeaderboardWindow } from '@/components/windows/LeaderboardWindow';
 import { WelcomeModal } from '@/components/windows/WelcomeModal';
 import { ShareFlexCardModal } from '@/components/windows/ShareFlexCardModal';
 import { LiquidationModal } from '@/components/modals/LiquidationModal';
+import { RetroErrorBoundary } from '@/components/common/RetroErrorBoundary';
 import { Taskbar } from '@/components/desktop/Taskbar';
 
 interface DesktopIconConfig {
@@ -94,14 +95,30 @@ export const DesktopCanvas: React.FC = () => {
       </div>
 
       {/* =================================================================== */}
-      {/* FLOATING RETRO APPLICATION WINDOWS                                  */}
-      {/* =================================================================== */}
-      <TurboTradeWindow />
-      <DegenVaultWindow />
-      <LeaderboardWindow />
-      <WelcomeModal />
-      <ShareFlexCardModal />
-      <LiquidationModal />
+      {/* FLOATING RETRO APPLICATION WINDOWS WITH FAULT ISOLATION */}
+      <RetroErrorBoundary name="TurboTrade.exe">
+        <TurboTradeWindow />
+      </RetroErrorBoundary>
+
+      <RetroErrorBoundary name="DegenVault.exe">
+        <DegenVaultWindow />
+      </RetroErrorBoundary>
+
+      <RetroErrorBoundary name="Leaderboard.exe">
+        <LeaderboardWindow />
+      </RetroErrorBoundary>
+
+      <RetroErrorBoundary name="WelcomeModal">
+        <WelcomeModal />
+      </RetroErrorBoundary>
+
+      <RetroErrorBoundary name="ShareFlexCard.exe">
+        <ShareFlexCardModal />
+      </RetroErrorBoundary>
+
+      <RetroErrorBoundary name="LiquidationModal">
+        <LiquidationModal />
+      </RetroErrorBoundary>
 
       {/* =================================================================== */}
       {/* FIXED RETRO TASKBAR & SYSTEM TRAY                                   */}
