@@ -109,7 +109,9 @@ export const RetroCandleChart: React.FC<RetroCandleChartProps> = ({ pair, timefr
           }));
           seriesRef.current.setData(formatted);
           if (formatted.length > 0) {
-            lastCandleTimeRef.current = Number(formatted[formatted.length - 1].time);
+            const lastCandle = formatted[formatted.length - 1];
+            lastCandleTimeRef.current = Number(lastCandle.time);
+            useMarketDataStore.getState().updateTicker(pair, { price: lastCandle.close });
           }
           chart.timeScale().fitContent();
           setIsLoading(false);

@@ -25,31 +25,31 @@ interface MarketDataState {
 const INITIAL_TICKERS: Record<TradingPair, TickerData> = {
   BTCUSDT: {
     symbol: 'BTCUSDT',
-    price: 64281.5,
-    change24h: 2.45,
-    high24h: 65240.0,
-    low24h: 63180.5,
-    volume24h: 38421.9,
+    price: 79540.0,
+    change24h: 1.45,
+    high24h: 79760.0,
+    low24h: 78450.0,
+    volume24h: 42150.0,
     fundingRate: 0.0001,
     nextFundingTime: Date.now() + 13335000,
   },
   ETHUSDT: {
     symbol: 'ETHUSDT',
-    price: 3495.2,
-    change24h: -1.15,
-    high24h: 3580.0,
-    low24h: 3420.0,
-    volume24h: 189200.4,
+    price: 2505.0,
+    change24h: -0.85,
+    high24h: 2540.0,
+    low24h: 2480.0,
+    volume24h: 195200.0,
     fundingRate: 0.0001,
     nextFundingTime: Date.now() + 13335000,
   },
   SOLUSDT: {
     symbol: 'SOLUSDT',
-    price: 148.6,
-    change24h: 5.82,
-    high24h: 152.4,
-    low24h: 139.8,
-    volume24h: 1240500.0,
+    price: 104.5,
+    change24h: 3.20,
+    high24h: 108.0,
+    low24h: 101.5,
+    volume24h: 1450000.0,
     fundingRate: 0.00015,
     nextFundingTime: Date.now() + 13335000,
   },
@@ -58,9 +58,9 @@ const INITIAL_TICKERS: Record<TradingPair, TickerData> = {
 export const useMarketDataStore = create<MarketDataState>((set, get) => ({
   selectedPair: 'BTCUSDT',
   prices: {
-    BTCUSDT: 64281.5,
-    ETHUSDT: 3495.2,
-    SOLUSDT: 148.6,
+    BTCUSDT: 79540.0,
+    ETHUSDT: 2505.0,
+    SOLUSDT: 104.5,
   },
   priceDirections: {
     BTCUSDT: 'same',
@@ -132,11 +132,33 @@ export const useMarketDataStore = create<MarketDataState>((set, get) => ({
   },
 
   updateLatestCandle: (pair: TradingPair, candle: CandleData) => {
-    const { latestCandles } = get();
+    const { latestCandles, prices, priceDirections, tickers } = get();
+    const prevTicker = tickers[pair];
+    const oldPrice = prices[pair] || candle.close;
+    const dir: 'up' | 'down' | 'same' =
+      candle.close > oldPrice ? 'up' : candle.close < oldPrice ? 'down' : priceDirections[pair];
+
     set({
       latestCandles: {
         ...latestCandles,
         [pair]: candle,
+      },
+      prices: {
+        ...prices,
+        [pair]: candle.close,
+      },
+      priceDirections: {
+        ...priceDirections,
+        [pair]: dir,
+      },
+      tickers: {
+        ...tickers,
+        [pair]: {
+          ...prevTicker,
+          price: candle.close,
+          high24h: Math.max(prevTicker?.high24h || 0, candle.high),
+          low24h: Math.min(prevTicker?.low24h || candle.low, candle.low),
+        },
       },
     });
   },

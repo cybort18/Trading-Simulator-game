@@ -12,8 +12,12 @@ export class BinanceWsService {
   private lastMessageTime = Date.now();
   private isExplicitlyClosed = false;
 
-  private readonly streamUrl =
-    'wss://fstream.binance.com/stream?streams=btcusdt@ticker/btcusdt@kline_1m/btcusdt@markPrice@1s/ethusdt@ticker/ethusdt@kline_1m/ethusdt@markPrice@1s/solusdt@ticker/solusdt@kline_1m/solusdt@markPrice@1s';
+  private readonly streamUrls = [
+    'wss://data-stream.binance.vision/stream?streams=btcusdt@ticker/btcusdt@kline_1m/ethusdt@ticker/ethusdt@kline_1m/solusdt@ticker/solusdt@kline_1m',
+    'wss://stream.binance.com:9443/stream?streams=btcusdt@ticker/btcusdt@kline_1m/ethusdt@ticker/ethusdt@kline_1m/solusdt@ticker/solusdt@kline_1m',
+    'wss://fstream.binance.com/stream?streams=btcusdt@ticker/btcusdt@kline_1m/btcusdt@markPrice@1s/ethusdt@ticker/ethusdt@kline_1m/ethusdt@markPrice@1s/solusdt@ticker/solusdt@kline_1m/solusdt@markPrice@1s',
+  ];
+  private currentStreamIndex = 0;
 
   private constructor() {}
 
@@ -32,8 +36,10 @@ export class BinanceWsService {
     this.isExplicitlyClosed = false;
     useMarketDataStore.getState().setConnectionStatus('CONNECTING');
 
+    const targetUrl = this.streamUrls[this.currentStreamIndex % this.streamUrls.length];
+
     try {
-      this.socket = new WebSocket(this.streamUrl);
+      this.socket = new WebSocket(targetUrl);
 
       this.socket.onopen = () => {
         this.reconnectAttempts = 0;
@@ -48,12 +54,13 @@ export class BinanceWsService {
       };
 
       this.socket.onerror = (error) => {
-        console.warn('Binance WebSocket error:', error);
+        console.warn(`Binance WebSocket error on ${targetUrl}:`, error);
       };
 
       this.socket.onclose = () => {
         this.stopHeartbeat();
         if (!this.isExplicitlyClosed) {
+          this.currentStreamIndex++;
           useMarketDataStore.getState().setConnectionStatus('RECONNECTING');
           this.scheduleReconnect();
         } else {
@@ -61,7 +68,8 @@ export class BinanceWsService {
         }
       };
     } catch (err) {
-      console.error('Failed to create WebSocket connection:', err);
+      console.error(`Failed to create WebSocket connection to ${targetUrl}:`, err);
+      this.currentStreamIndex++;
       this.scheduleReconnect();
     }
   }
@@ -199,27 +207,36 @@ export class BinanceWsService {
     interval = '1m',
     limit = 100
   ): Promise<CandleData[]> {
-    try {
-      const url = `https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`;
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`HTTP Error ${response.status}`);
+    const endpoints = [
+      `https://data-api.binance.vision/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`,
+      `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`,
+      `https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`,
+    ];
+
+    for (const url of endpoints) {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) continue;
+        const raw = await response.json();
+        const sanitized = sanitizeHistoricalKlines(raw);
+        if (sanitized.length > 0) {
+          // Immediately synchronize latest historical close price to store
+          const latest = sanitized[sanitized.length - 1];
+          useMarketDataStore.getState().updateTicker(symbol, { price: latest.close });
+          return sanitized;
+        }
+      } catch {
+        // Continue to next endpoint fallback
       }
-      const raw = await response.json();
-      const sanitized = sanitizeHistoricalKlines(raw);
-      if (sanitized.length > 0) {
-        return sanitized;
-      }
-      throw new Error('No valid klines in response');
-    } catch (err) {
-      console.warn(`Binance REST klines fetch failed for ${symbol}, generating smooth historical baseline:`, err);
-      return this.generateFallbackHistoricalCandles(symbol, limit);
     }
+
+    console.warn(`All Binance REST endpoints failed for ${symbol}, generating smooth historical baseline`);
+    return this.generateFallbackHistoricalCandles(symbol, limit);
   }
 
   private generateFallbackHistoricalCandles(symbol: TradingPair, count: number): CandleData[] {
     const basePrice =
-      symbol === 'BTCUSDT' ? 64000 : symbol === 'ETHUSDT' ? 3480 : 145;
+      symbol === 'BTCUSDT' ? 79500 : symbol === 'ETHUSDT' ? 2500 : 104;
     // Align now to minute boundary in seconds
     const now = Math.floor(Date.now() / 60000) * 60;
     const candles: CandleData[] = [];
