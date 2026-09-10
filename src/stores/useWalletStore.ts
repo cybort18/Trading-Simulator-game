@@ -1,23 +1,15 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { safeStateStorage } from '@/utils/safeStorage';
 import { roundCurrency } from '@/utils/simulationMath';
+import { createTamperProtectedStorage } from '@/utils/tamperProtectedStorage';
+import { CRYPTOOS_STATE_STORAGE_KEY } from '@/utils/security';
+import {
+  DailyClaimManager,
+  DAILY_REWARD_TIERS,
+  type DailyRewardTier,
+} from '@/services/DailyClaimManager';
 
-export interface DailyRewardTier {
-  day: number;
-  reward: number;
-  label: string;
-}
-
-export const DAILY_REWARD_TIERS: DailyRewardTier[] = [
-  { day: 1, reward: 2.00, label: '+2 USDT' },
-  { day: 2, reward: 5.00, label: '+5 USDT' },
-  { day: 3, reward: 8.00, label: '+8 USDT' },
-  { day: 4, reward: 10.00, label: '+10 USDT' },
-  { day: 5, reward: 15.00, label: '+15 USDT' },
-  { day: 6, reward: 25.00, label: '+25 USDT' },
-  { day: 7, reward: 50.00, label: '+50 USDT + Mystery Box' },
-];
+export { DAILY_REWARD_TIERS, type DailyRewardTier };
 
 export interface WalletState {
   equity: number;
@@ -156,38 +148,26 @@ export const useWalletStore = create<WalletState>()(
       claimDailyReward: () => {
         const state = get();
         const now = Date.now();
-        const COOLDOWN_MS = 24 * 60 * 60 * 1000;
-        const GRACE_PERIOD_MS = 48 * 60 * 60 * 1000;
+        const res = DailyClaimManager.processClaim(state.lastClaimTimestamp, state.currentStreakDay, now);
 
-        if (state.lastClaimTimestamp > 0 && now - state.lastClaimTimestamp < COOLDOWN_MS) {
-          return { success: false, error: 'Daily reward is on 24-hour cooldown.' };
+        if (!res.success) {
+          return { success: false, error: res.error };
         }
-
-        let dayToClaim = state.currentStreakDay || 1;
-        if (state.lastClaimTimestamp > 0 && now - state.lastClaimTimestamp > GRACE_PERIOD_MS) {
-          dayToClaim = 1;
-        }
-
-        const tier = DAILY_REWARD_TIERS[dayToClaim - 1] || DAILY_REWARD_TIERS[0];
-        const rewardAmount = tier.reward;
-        const nextDay = dayToClaim >= 7 ? 1 : dayToClaim + 1;
 
         set({
-          availableMargin: roundCurrency(state.availableMargin + rewardAmount),
-          equity: roundCurrency(state.equity + rewardAmount),
-          currentStreakDay: nextDay,
+          availableMargin: roundCurrency(state.availableMargin + res.rewardAmount),
+          equity: roundCurrency(state.equity + res.rewardAmount),
+          currentStreakDay: res.nextStreakDay,
           lastClaimTimestamp: now,
         });
 
-        return { success: true, amount: rewardAmount };
+        return { success: true, amount: res.rewardAmount };
       },
 
       getTimeUntilNextDailyClaim: () => {
-        const { lastClaimTimestamp } = get();
-        if (!lastClaimTimestamp) return 0;
-        const elapsed = Date.now() - lastClaimTimestamp;
-        const COOLDOWN_MS = 24 * 60 * 60 * 1000;
-        return Math.max(0, COOLDOWN_MS - elapsed);
+        const { lastClaimTimestamp, currentStreakDay } = get();
+        const eligibility = DailyClaimManager.checkEligibility(lastClaimTimestamp, currentStreakDay);
+        return eligibility.timeRemainingMs;
       },
 
       resetWallet: (amount: number = DEFAULT_STARTING_BALANCE) => {
@@ -222,8 +202,8 @@ export const useWalletStore = create<WalletState>()(
       },
     }),
     {
-      name: 'cryptoos98-wallet-storage',
-      storage: createJSONStorage(() => safeStateStorage),
+      name: CRYPTOOS_STATE_STORAGE_KEY,
+      storage: createJSONStorage(() => createTamperProtectedStorage(CRYPTOOS_STATE_STORAGE_KEY)),
       // Persist numerical state
       partialize: (state) => ({
         equity: state.equity,

@@ -134,15 +134,15 @@ This roadmap outlines the complete sequence of engineering deliverables required
 
 ## Phase 5: Persistence, Gamification, Audio FX & Polish
 
-- [ ] **5.1 Implement 7-Day Reward Claim Engine (`DailyClaimManager.ts`)**
+- [x] **5.1 Implement 7-Day Reward Claim Engine (`DailyClaimManager.ts`)**
   - Deliverable: Logic tracking consecutive daily claims with 24-hour unlock cooldown and 36-hour grace period.
   - Acceptance Criteria: Day 1 (2 USDT), Day 2 (5 USDT), Day 3 (8 USDT), Day 4 (10 USDT), Day 5 (15 USDT), Day 6 (25 USDT), Day 7 (50 USDT + Mystery Box); streak resets if interval exceeds 36 hours.
 
-- [ ] **5.2 Integrate LocalStorage Persistence with Anti-Tamper Checksum**
+- [x] **5.2 Integrate LocalStorage Persistence with Anti-Tamper Checksum**
   - Deliverable: Zustand `persist` middleware storing state in `CRYPTOOS_98_STATE_V1` sealed with HMAC-SHA256 checksum.
   - Acceptance Criteria: Page reload preserves balances, trade history, and streak; manual console tampering of balance triggers Blue Screen of Death (BSOD) reset dialog.
 
-- [ ] **5.3 Build Retro Sound Synthesis Engine (`SoundFXService.ts`)**
+- [x] **5.3 Build Retro Sound Synthesis Engine (`SoundFXService.ts`)**
   - Deliverable: Web Audio API sound generator producing:
     - Mechanical click on button press.
     - Cash register ding on claim reward.
@@ -150,10 +150,10 @@ This roadmap outlines the complete sequence of engineering deliverables required
     - CRT degauss glass-crash on position liquidation.
   - Acceptance Criteria: Audio can be toggled on/off via speaker icon in System Tray.
 
-- [ ] **5.4 Implement Responsive Fallback for Tablets and Mobile**
+- [x] **5.4 Implement Responsive Fallback for Tablets and Mobile**
   - Deliverable: Adaptive layout collapsing floating windows into retro segmented tab strips on viewports < 1024px, and displaying an MS-DOS resolution warning on mobile viewports < 768px.
   - Acceptance Criteria: UI remains usable across desktop resolutions from 1024x768 to 4K Ultrawide.
 
-- [ ] **5.5 End-to-End Verification & Production Build Validation**
+- [x] **5.5 End-to-End Verification & Production Build Validation**
   - Deliverable: Comprehensive manual and automated verification of all trading workflows, chart feeds, and modal interactions.
   - Acceptance Criteria: Production bundle builds cleanly (`npm run build`) with zero lint or type errors; Lighthouse score > 90.

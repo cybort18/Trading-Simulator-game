@@ -15,6 +15,7 @@ import {
   DEFAULT_TAKER_FEE_RATE,
   MAINTENANCE_MARGIN_RATES,
 } from '@/utils/simulationMath';
+import { soundFXService } from '@/services/SoundFXService';
 
 const LEVERAGE_SNAPS = [1, 5, 10, 20, 50, 100];
 
@@ -386,7 +387,10 @@ export const TurboTradeWindow: React.FC = () => {
                                   Share ↗
                                 </button>
                                 <button
-                                  onClick={() => closePosition(pos.id, mark)}
+                                  onClick={() => {
+                                    closePosition(pos.id, mark);
+                                    soundFXService.playOrderExecuted();
+                                  }}
                                   className="win-btn text-[9px] px-1.5 py-0.5 text-error font-bold active:translate-x-0.5 active:translate-y-0.5"
                                 >
                                   Close [X]
@@ -569,7 +573,13 @@ export const TurboTradeWindow: React.FC = () => {
               max="100"
               step="1"
               value={leverage}
-              onChange={(e) => setLeverage(Number(e.target.value))}
+              onChange={(e) => {
+                const val = Number(e.target.value);
+                setLeverage(val);
+                if (val >= 20) {
+                  soundFXService.playLeverageWarning();
+                }
+              }}
               className="w-full h-3 cursor-ew-resize accent-titlebar-navy"
             />
 
@@ -579,7 +589,14 @@ export const TurboTradeWindow: React.FC = () => {
                 <button
                   key={val}
                   type="button"
-                  onClick={() => setLeverage(val)}
+                  onClick={() => {
+                    setLeverage(val);
+                    if (val >= 20) {
+                      soundFXService.playLeverageWarning();
+                    } else {
+                      soundFXService.playKeyClick();
+                    }
+                  }}
                   className={`py-0.5 text-[8.5px] font-bold ${
                     leverage === val
                       ? 'win-btn-pressed bg-win-pressed text-titlebar-navy font-extrabold'
@@ -707,6 +724,8 @@ export const TurboTradeWindow: React.FC = () => {
                 );
                 if (!res.success) {
                   setOrderError(res.error || 'Order failed');
+                } else {
+                  soundFXService.playOrderExecuted();
                 }
               }}
               className="win-btn bg-[#008531] text-white font-bold py-2 flex items-center justify-center space-x-1.5 hover:bg-[#009938] active:translate-x-0.5 active:translate-y-0.5 shadow"
@@ -742,6 +761,8 @@ export const TurboTradeWindow: React.FC = () => {
                 );
                 if (!res.success) {
                   setOrderError(res.error || 'Order failed');
+                } else {
+                  soundFXService.playOrderExecuted();
                 }
               }}
               className="win-btn bg-[#BA1A1A] text-white font-bold py-2 flex items-center justify-center space-x-1.5 hover:bg-[#CC2020] active:translate-x-0.5 active:translate-y-0.5 shadow"

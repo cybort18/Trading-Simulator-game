@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useTradingStore } from '@/stores/useTradingStore';
 import { useWalletStore } from '@/stores/useWalletStore';
 import { PixelIcon } from '@/components/common/PixelIcon';
+import { soundFXService } from '@/services/SoundFXService';
 
 export const LiquidationModal: React.FC = () => {
   const isOpen = useTradingStore((state) => state.isLiquidationModalOpen);
@@ -11,6 +12,12 @@ export const LiquidationModal: React.FC = () => {
   const equity = useWalletStore((state) => state.equity);
   const claimFaucet = useWalletStore((state) => state.claimFaucet);
   const isFaucetAvailable = useWalletStore((state) => state.isFaucetAvailable());
+
+  useEffect(() => {
+    if (isOpen) {
+      soundFXService.playLiquidationCrash();
+    }
+  }, [isOpen]);
 
   if (!isOpen || !latestLiq) return null;
 

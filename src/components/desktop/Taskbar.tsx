@@ -4,6 +4,7 @@ import { useMarketDataStore } from '@/stores/useMarketDataStore';
 import { useWalletStore } from '@/stores/useWalletStore';
 import { WindowId } from '@/types/window';
 import { PixelIcon } from '@/components/common/PixelIcon';
+import { soundFXService } from '@/services/SoundFXService';
 
 export const Taskbar: React.FC = () => {
   const windows = useWindowStore((state) => state.windows);
@@ -18,7 +19,12 @@ export const Taskbar: React.FC = () => {
 
   const [isStartOpen, setIsStartOpen] = useState(false);
   const [timeStr, setTimeStr] = useState('');
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(!soundFXService.getIsMuted());
+
+  useEffect(() => {
+    const unsub = soundFXService.subscribeMute((muted) => setSoundEnabled(!muted));
+    return unsub;
+  }, []);
 
   // Digital clock updating every second
   useEffect(() => {
@@ -251,9 +257,14 @@ export const Taskbar: React.FC = () => {
 
           {/* Audio Speaker Icon Toggle */}
           <div
-            onClick={() => setSoundEnabled(!soundEnabled)}
-            className="border-l border-bevel-shadow pl-2 flex items-center cursor-pointer text-black"
-            title={soundEnabled ? 'Audio On' : 'Audio Muted'}
+            onClick={() => {
+              const newMuted = soundFXService.toggleMute();
+              if (!newMuted) {
+                soundFXService.playKeyClick();
+              }
+            }}
+            className="border-l border-bevel-shadow pl-2 flex items-center cursor-pointer text-black hover:opacity-80"
+            title={soundEnabled ? 'Audio On (Click to Mute)' : 'Audio Muted (Click to Unmute)'}
           >
             <PixelIcon name={soundEnabled ? 'volume_on' : 'volume_off'} size={14} />
           </div>

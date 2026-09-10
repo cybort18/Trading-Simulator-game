@@ -8,8 +8,11 @@ import { LeaderboardWindow } from '@/components/windows/LeaderboardWindow';
 import { WelcomeModal } from '@/components/windows/WelcomeModal';
 import { ShareFlexCardModal } from '@/components/windows/ShareFlexCardModal';
 import { LiquidationModal } from '@/components/modals/LiquidationModal';
+import { BSODModal } from '@/components/modals/BSODModal';
+import { ResolutionGuard } from '@/components/common/ResolutionGuard';
 import { RetroErrorBoundary } from '@/components/common/RetroErrorBoundary';
 import { Taskbar } from '@/components/desktop/Taskbar';
+import { soundFXService } from '@/services/SoundFXService';
 
 interface DesktopIconConfig {
   id: WindowId | 'recycle_bin';
@@ -48,6 +51,12 @@ export const DesktopCanvas: React.FC = () => {
   return (
     <div
       onMouseDown={() => setSelectedIcon(null)}
+      onClickCapture={(e) => {
+        const target = e.target as HTMLElement | null;
+        if (target && target.closest('button, .win-btn, .win-outset, input[type="range"]')) {
+          soundFXService.playKeyClick();
+        }
+      }}
       className="relative w-screen h-screen bg-desktop-teal overflow-hidden select-none font-ui"
     >
       {/* =================================================================== */}
@@ -119,6 +128,12 @@ export const DesktopCanvas: React.FC = () => {
       <RetroErrorBoundary name="LiquidationModal">
         <LiquidationModal />
       </RetroErrorBoundary>
+
+      {/* Retro BSOD Anti-Tamper Crash Shield */}
+      <BSODModal />
+
+      {/* Mobile/Tablet DOS Resolution Warning Guard */}
+      <ResolutionGuard />
 
       {/* =================================================================== */}
       {/* FIXED RETRO TASKBAR & SYSTEM TRAY                                   */}

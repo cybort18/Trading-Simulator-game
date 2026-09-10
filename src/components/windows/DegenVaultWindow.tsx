@@ -3,6 +3,7 @@ import { WindowFrame } from '@/components/desktop/WindowFrame';
 import { PixelIcon } from '@/components/common/PixelIcon';
 import { useWalletStore, DAILY_REWARD_TIERS } from '@/stores/useWalletStore';
 import confetti from 'canvas-confetti';
+import { soundFXService } from '@/services/SoundFXService';
 
 function getRankAndXp(totalTrades: number, realizedPnl: number, winRate: number) {
   const xp = totalTrades * 120 + Math.max(0, Math.floor(realizedPnl * 10)) + Math.floor(winRate * 5);
@@ -90,6 +91,7 @@ export const DegenVaultWindow: React.FC = () => {
     if (!canClaim) return;
     const res = claimDailyReward();
     if (res.success) {
+      soundFXService.playClaimReward();
       setClaimFeedback(`Claimed +${res.amount?.toFixed(2)} USDT!`);
       confetti({
         particleCount: 90,

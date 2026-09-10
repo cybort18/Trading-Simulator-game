@@ -5,6 +5,7 @@ import { useWalletStore } from '@/stores/useWalletStore';
 import { TradingPair } from '@/types/market';
 import { Position } from '@/types/trading';
 import { evaluateCrossMarginPortfolio } from '@/utils/simulationMath';
+import { soundFXService } from '@/services/SoundFXService';
 
 export class LiquidationEngineService {
   private isRunning: boolean = false;
@@ -195,8 +196,11 @@ export class LiquidationEngineService {
     }
 
     // Trigger callback if positions were liquidated
-    if (liquidatedPositions.length > 0 && this.onLiquidationCallback) {
-      this.onLiquidationCallback(liquidatedPositions);
+    if (liquidatedPositions.length > 0) {
+      soundFXService.playLiquidationCrash();
+      if (this.onLiquidationCallback) {
+        this.onLiquidationCallback(liquidatedPositions);
+      }
     }
 
     return liquidatedIds;
