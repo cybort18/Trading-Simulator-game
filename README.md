@@ -1,66 +1,66 @@
 # CryptoOS 98 - Retro Crypto Futures Trading Simulator
 
-> **Nostalgia Windows 98 meets High-Stakes Crypto Futures Trading.**  
-> Simulator trading perpetual futures crypto dengan zero financial risk, live market feeds dari Binance, dan antarmuka desktop OS retro era 90-an.
+> **Windows 98 Nostalgia Meets High-Stakes Crypto Futures Trading.**  
+> A zero-risk cryptocurrency perpetual futures simulator powered by live Binance market data streams and wrapped in an authentic late-1990s desktop operating system interface.
 
 ---
 
-## Fondasi Dokumentasi Engineering
+## Architectural Documentation Foundation
 
-Proyek ini dibangun di atas 5 dokumen arsitektur dan spesifikasi engineering lengkap:
+This project is built upon five foundational engineering specifications and design documents:
 
 1. **[`PRD.md`](./PRD.md) (Product Requirements Document):**  
-   Visi produk, profil pengguna (*Degen Dan*, *Calculated Cara*, *Nostalgic Nate*), psikologi retensi, 10 USDT starter pack, 7-day daily login streak (2, 5, 8, 10..50 USDT), dan virality share card.
+   Product vision, target personas (*Degen Dan*, *Calculated Cara*, *Nostalgic Nate*), retention psychology, 10.00 USDT virtual starter stipend, 7-day tiered daily claim ladder (2, 5, 8, 10..50 USDT), and social flex card virality.
 2. **[`ARCHITECTURE.md`](./ARCHITECTURE.md) (Technical Architecture):**  
-   Arsitektur Vite + React 18 + TypeScript (Strict) + Zustand + Lightweight Charts, pipeline Binance WebSocket multiplexing, diagram alur order & likuidasi (ASCII), window z-index layer stack, serta anti-tamper checksum.
+   Vite + React 18 + TypeScript (Strict Mode) + Zustand + Lightweight Charts, Binance WebSocket multiplexing pipeline, ASCII order and liquidation data flows, window z-index layer stack, and anti-tamper cryptographic storage.
 3. **[`SIMULATION_ENGINE.md`](./SIMULATION_ENGINE.md) (Trading & Mathematical Logic):**  
-   Penurunan rumus eksak matematika keuangan: Initial Margin, Maintenance Margin, Unrealized/Realized PnL, ROE %, derivasi rumus harga likuidasi ($P_{\text{liq}}$ untuk isolated/cross long & short), simulated 8-hour funding rate, dan contoh hitungan numerik lengkap akun 10 USDT posisi 20x Long BTC.
+   Exact mathematical financial derivations: Initial Margin, Maintenance Margin, Unrealized/Realized PnL, ROE %, liquidation price ($P_{\text{liq}}$ for isolated and cross margin in both long and short directions), simulated 8-hour funding rates, and complete numerical walkthroughs for a 10 USDT account trading BTC at 20x leverage.
 4. **[`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md) (Design Tokens & 3D Bevel Guide):**  
-   Panduan token desain diekstrak dari Stitch MCP: `#008080` (Teal), `#C0C0C0` (Silver), `#000080` to `#1084D0` (Titlebar Navy Gradient), `#121212` (CRT Black), `#00FF66` (Neon Green), `#FF3333` (CRT Red), spesifikasi optical bevel CSS (`.win-outset`, `.win-inset`, `.win-inset-deep`, `.win-btn`), dan anatomi window 98.
+   Design tokens extracted from Stitch MCP: `#008080` (Teal), `#C0C0C0` (Silver), `#000080` to `#1084D0` (Active Titlebar Navy Gradient), `#121212` (CRT Black), `#00FF66` (Phosphor Green), `#FF3333` (CRT Red), optical bevel CSS utilities (`.win-outset`, `.win-inset`, `.win-inset-deep`, `.win-btn`), and Windows 98 window anatomy.
 5. **[`TASK_ROADMAP.md`](./TASK_ROADMAP.md) (Atomic Implementation Roadmap):**  
-   Checklist bertahap dari Phase 1 hingga Phase 5 dengan kriteria deliverable deterministik yang telah selesai 100%.
+   Step-by-step phased execution checklist from Phase 1 through Phase 5 with deterministic acceptance criteria, 100% completed.
 
 ---
 
-## Status Proyek: Phase 1 hingga Phase 5 Selesai (v1.0.0 Production Release)
+## Project Status: Phase 1 Through Phase 5 Complete (v1.0.0 Production Release)
 
 - [x] **Phase 1: Environment Setup, Tailwind Retro Preset & Window Manager**
-  - [x] Inisialisasi Vite + React 18 + TypeScript (`strict: true`) + path alias `@/*`.
-  - [x] Konfigurasi Tailwind CSS skeuomorphic 98 & 3D optical bevel CSS utility classes.
-  - [x] Desktop Canvas `#008080` dengan ikon desktop interaktif (`TurboTrade.exe`, `DegenVault.exe`, `Leaderboard.exe`, `Recycle Bin`).
-  - [x] Retro Taskbar 36px di bagian bawah dengan tombol **Start** klasik, window task tabs aktif/inaktif, dan System Tray (WS live LED, quick balance, 24h clock, audio toggle).
-  - [x] Draggable Window Manager (`WindowFrame.tsx`) dengan pembatas layar (boundary clamping), minimize/maximize/close, dan active navy titlebar gradient.
-  - [x] State management multi-window reaktif berbasis Zustand (`useWindowStore.ts`).
+  - [x] Initialized Vite + React 18 + TypeScript (`strict: true`) with path alias `@/*`.
+  - [x] Configured Tailwind CSS skeuomorphic 98 theme and 3D optical bevel CSS utility classes.
+  - [x] Implemented `#008080` Desktop Canvas with interactive desktop icons (`TurboTrade.exe`, `DegenVault.exe`, `Leaderboard.exe`, `Recycle Bin`).
+  - [x] Built fixed 36px Retro Taskbar with classic 4-color **Start** button, active/inactive window task tabs, and System Tray (WS live LED, balance readout, 24h clock, audio mute toggle).
+  - [x] Built draggable Window Manager (`WindowFrame.tsx`) with boundary clamping, minimize/maximize/close controls, and active navy gradient titlebars.
+  - [x] Implemented centralized reactive multi-window state management via Zustand (`useWindowStore.ts`).
 
 - [x] **Phase 2: Real-Time Binance WebSocket Service & Chart Integration**
-  - [x] Singleton `BinanceWsService.ts` multiplexing live stream Binance (`@ticker`, `@kline_1m`, `@markPrice@1s`).
-  - [x] Reconnection exponential backoff, 15s heartbeat liveness check, dan fallback REST hydration.
-  - [x] Reactive state store `useMarketDataStore.ts` tracking live prices, 24h ticker metrics, funding rate, dan telemetry latency.
-  - [x] Integrasi TradingView `Lightweight Charts` (v5) di dalam CRT container `#121212` dengan candlestick merah/hijau retro.
-  - [x] Dynamic pair switcher (`BTC/USDT`, `ETH/USDT`, `SOL/USDT`), monospace price banner dengan flash warna tick, countdown funding 8-jam, dan sinkronisasi status System Tray.
+  - [x] Implemented singleton `BinanceWsService.ts` multiplexing Binance live feeds (`@ticker`, `@kline_1m`, `@markPrice@1s`).
+  - [x] Built exponential backoff reconnection, 15-second heartbeat liveness checks, and fallback REST hydration.
+  - [x] Created reactive state store `useMarketDataStore.ts` tracking live prices, 24h ticker metrics, funding rates, and telemetry latency.
+  - [x] Integrated TradingView `Lightweight Charts` (v5) inside CRT container `#121212` with retro red/green candlesticks.
+  - [x] Added dynamic pair switcher (`BTC/USDT`, `ETH/USDT`, `SOL/USDT`), monospace price banner with flashing tick colors, 8-hour funding countdown, and System Tray status synchronization.
 
 - [x] **Phase 3: Trading & Liquidation Simulation Engine (Unit-Tested)**
-  - [x] Math core library `simulationMath.ts` mengimplementasikan rumus eksak perpetual futures: Notional Value, Quantity, uPnL, ROE %, Maintenance Margin, Liquidation Price (isolated & cross margin), Slippage model, dan Fees.
-  - [x] Zustand store `useWalletStore.ts` untuk manajemen ekuitas, margin terkunci, pemotongan fee, realized PnL, win/loss stats, dan faucet bailout.
-  - [x] Zustand store `useTradingStore.ts` untuk eksekusi order (Market/Limit, Long/Short), lifecycle posisi, update PnL real-time batch, dan riwayat trading.
-  - [x] High-frequency liquidation scanner `LiquidationEngine.ts` yang memantau tick harga real-time dan mengeksekusi force liquidation saat harga menyentuh threshold.
-  - [x] Simulated 8-hour funding rate engine `FundingRateEngine.ts` dengan countdown presisi dan settlement fee transfer.
-  - [x] Windows 98 Critical Error crash modal `LiquidationModal.tsx` dengan fitur emergency bailout faucet saat saldo kolaps di bawah 1.00 USDT.
+  - [x] Developed mathematical core library `simulationMath.ts` implementing exact perpetual futures formulas: Notional Value, Quantity, uPnL, ROE %, Maintenance Margin, Liquidation Price (isolated and cross margin), slippage model, and fees.
+  - [x] Created Zustand store `useWalletStore.ts` managing equity, locked margin, fee deduction, realized PnL, win/loss metrics, and emergency faucet bailouts.
+  - [x] Created Zustand store `useTradingStore.ts` for order execution (Market/Limit, Long/Short), position lifecycle management, batch PnL recalculations, and trade history.
+  - [x] Built high-frequency liquidation scanner `LiquidationEngine.ts` evaluating ticks in real-time and executing forced liquidations when thresholds are breached.
+  - [x] Built simulated 8-hour funding rate engine `FundingRateEngine.ts` with precision countdown timers and settlement balance transfers.
+  - [x] Created Windows 98 Critical Error crash dialog `LiquidationModal.tsx` featuring emergency bailout faucet access when balance collapses below 1.00 USDT.
 
 - [x] **Phase 4: Window Applications & Interactive Modals**
-  - [x] `TurboTradeWindow.tsx`: Terminal futures lengkap dengan toggle Market/Limit, Cross/Isolated, leverage discrete slider (1x - 100x), quick size buttons (25%, 50%, 75%, MAX), pre-trade calculation box, serta tabel open positions dengan aksi `Close` dan `Share`.
-  - [x] `DegenVaultWindow.tsx`: Profil trader retro (Novice Liquidator -> Legendary Whale), XP progression bar, financial ledger CRT readout, dan ladder claim harian 7 hari.
-  - [x] `LeaderboardWindow.tsx`: Podium showcase Top 3, spreadsheet data grid sortable, kategori turnamen (All-Time ROI, 24H Gainers, Weekly Cup, Most Liquidated), dan sticky row `YOU`.
-  - [x] `WelcomeModal.tsx`: Onboarding dialog Windows 98 dengan ringkasan modal virtual 10.00 USDT dan persistensi startup.
-  - [x] `ShareFlexCardModal.tsx`: Generator card viral 600x380 dengan 3 tema CRT (Cyber Green, Blood Red, Gold Whale), copy PNG ke clipboard via `html-to-image`, download PNG, dan integrasi share Twitter/X.
+  - [x] `TurboTradeWindow.tsx`: Full futures terminal featuring Market/Limit order modes, Cross/Isolated margin, discrete leverage slider (1x - 100x), quick size buttons (25%, 50%, 75%, MAX), dynamic pre-trade calculation box, and open positions table with working `Close` and `Share` actions.
+  - [x] `DegenVaultWindow.tsx`: Retro trader profile (`Novice Liquidator` -> `Legendary Whale`), XP progression bar, financial ledger CRT readout, and 7-day daily claim ladder.
+  - [x] `LeaderboardWindow.tsx`: Top 3 podium showcase, sortable spreadsheet data grid, tournament category filters (All-Time ROI, 24H Gainers, Weekly Cup, Most Liquidated), and pinned sticky row for `YOU`.
+  - [x] `WelcomeModal.tsx`: Centered Windows 98 onboarding dialog detailing the 10.00 USDT starter stipend and startup preference persistence.
+  - [x] `ShareFlexCardModal.tsx`: Viral 600x380 PnL card generator with 3 CRT themes (Cyber Green, Blood Red, Gold Whale), clipboard PNG copy via `html-to-image`, PNG download, and Twitter/X share intent.
 
 - [x] **Phase 5: Persistence, Gamification, Audio FX & Polish**
-  - [x] `DailyClaimManager.ts`: Engine claim harian 7 hari dengan cooldown unlock 24 jam dan grace period 36 jam.
-  - [x] `security.ts` & `tamperProtectedStorage.ts`: Anti-tamper checksum cryptographic hashing (SHA-256) untuk state persistence `CRYPTOOS_98_STATE_V1`.
-  - [x] `BSODModal.tsx`: Authentic Windows 98 Blue Screen of Death (BSOD) recovery shield yang memblokir dan mereset saldo yang dimanipulasi secara ilegal melalui console DevTools.
-  - [x] `SoundFXService.ts`: Procedural Web Audio API synthesizer menghasilkan mechanical click, confirmation chime, rising arpeggio, warning beep, dan CRT degauss glass-crash tanpa dependensi file audio eksternal.
-  - [x] `ResolutionGuard.tsx`: Layar deteksi resolusi BIOS/MS-DOS untuk perangkat mobile dan tablet dengan bypass opsi.
-  - [x] 100% test coverage pada unit tests (70 passed) dan clean production build (`tsc && vite build`).
+  - [x] `DailyClaimManager.ts`: 7-day daily claim engine with 24-hour unlock cooldown and 36-hour grace period streak resets.
+  - [x] `security.ts` & `tamperProtectedStorage.ts`: Anti-tamper cryptographic hashing (SHA-256) and envelope verification sealing `CRYPTOOS_98_STATE_V1`.
+  - [x] `BSODModal.tsx`: Authentic Windows 98 Blue Screen of Death (BSOD) recovery shield that intercepts and neutralizes fraudulent balances manipulated via DevTools.
+  - [x] `SoundFXService.ts`: Procedural Web Audio API synthesizer generating mechanical clicks, confirmation chimes, rising arpeggios, warning beeps, and CRT degauss glass-crash effects without external audio files.
+  - [x] `ResolutionGuard.tsx`: Authentic BIOS / MS-DOS hardware detection screen for mobile and tablet viewports with user bypass capability.
+  - [x] 100% test pass rate across all unit test suites (70 passed) and clean production build (`tsc && vite build`).
 
 ---
 
@@ -69,7 +69,7 @@ Proyek ini dibangun di atas 5 dokumen arsitektur dan spesifikasi engineering len
 - **UI Framework:** React 18, TypeScript (Strict Mode)
 - **Build Tool:** Vite 5
 - **Styling:** Tailwind CSS v3 (Custom Skeuomorphic Retro Theme, 0px border radius, 3D optical bevels)
-- **State Management:** Zustand 4 dengan custom tamper-protected persistence
+- **State Management:** Zustand 4 with custom tamper-protected persistence
 - **Charts:** TradingView Lightweight Charts v5
 - **Audio:** Native Web Audio API (Zero external MP3/WAV assets)
 - **Image Generation:** html-to-image
@@ -79,9 +79,9 @@ Proyek ini dibangun di atas 5 dokumen arsitektur dan spesifikasi engineering len
 
 ---
 
-## Cara Menjalankan Secara Lokal
+## Local Development & Setup
 
-Pastikan Anda telah menginstal **Node.js (v18+)** dan **npm**:
+Ensure that **Node.js (v18+)** and **npm** are installed:
 
 ```bash
 # 1. Clone repository
@@ -91,16 +91,16 @@ cd Trading-Simulator-game
 # 2. Install dependencies
 npm install
 
-# 3. Jalankan unit test suite
+# 3. Run unit test suite
 npm run test
 
-# 4. Jalankan development server
+# 4. Launch development server
 npm run dev
 ```
 
-Buka browser dan akses: `http://localhost:3000/`
+Open your browser and navigate to: `http://localhost:3000/`
 
-Untuk memvalidasi build versi production:
+To produce a production bundle:
 ```bash
 npm run build
 ```

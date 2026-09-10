@@ -63,7 +63,7 @@ export const WelcomeModal: React.FC = () => {
                 Welcome to CryptoOS 98 Terminal
               </h3>
               <p className="text-[11px] text-[#333] leading-snug mt-0.5">
-                Pasar crypto futures sangat volatil. Uji mental dan strategimu tanpa risiko kehilangan uang riil.
+                The crypto futures market is extremely volatile. Test your strategy and discipline with zero risk to real capital.
               </p>
             </div>
           </div>
@@ -81,7 +81,7 @@ export const WelcomeModal: React.FC = () => {
                   <span className="text-crt-bullish font-bold text-[13px] crt-glow-green">
                     10.00 USDT
                   </span>{' '}
-                  telah disuntikkan ke wallet virtualmu.
+                  has been credited to your virtual wallet.
                 </div>
               </div>
             </div>
@@ -93,26 +93,26 @@ export const WelcomeModal: React.FC = () => {
           {/* Quick Rules Inset */}
           <div className="win-inset bg-surface-low p-2 flex flex-col gap-1 text-[10px]">
             <div className="font-bold text-black border-b border-bevel-shadow pb-0.5 flex items-center justify-between">
-              <span>Quick Rules - Aturan Dasar Trading:</span>
+              <span>Quick Rules - Fundamental Trading Guidelines:</span>
               <span className="font-mono text-[8px] text-bevel-shadow">v1.0-DOC</span>
             </div>
             <div className="flex flex-col gap-1 text-[#222] pl-1 pt-0.5">
               <div className="flex items-start space-x-1.5">
                 <strong className="text-titlebar-navy font-mono">1.</strong>
                 <span>
-                  <strong>Pasang Posisi:</strong> Buka posisi <strong>Long</strong> (beli) jika prediksi harga naik, atau <strong>Short</strong> (jual) jika turun.
+                  <strong>Enter Positions:</strong> Open a <strong>Long</strong> (Buy) order if you expect prices to rise, or <strong>Short</strong> (Sell) if you anticipate a decline.
                 </span>
               </div>
               <div className="flex items-start space-x-1.5">
                 <strong className="text-titlebar-navy font-mono">2.</strong>
                 <span>
-                  <strong>Risiko Likuidasi:</strong> Perhatikan harga likuidasi (Liq. Price) agar modalmu tidak terlikuidasi seketika.
+                  <strong>Liquidation Risk:</strong> Monitor your Liquidation Price closely. High leverage compresses your margin buffer rapidly.
                 </span>
               </div>
               <div className="flex items-start space-x-1.5">
                 <strong className="text-titlebar-navy font-mono">3.</strong>
                 <span>
-                  <strong>Panjat Klasemen:</strong> Raih keuntungan setinggi-tingginya untuk masuk Global Leaderboard mingguan.
+                  <strong>Climb the Leaderboard:</strong> Maximize your net ROI and win rate to ascend the global weekly rankings.
                 </span>
               </div>
             </div>
