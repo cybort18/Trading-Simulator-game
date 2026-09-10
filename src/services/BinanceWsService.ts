@@ -1,4 +1,4 @@
-import { TradingPair, CandleData } from '@/types/market';
+import { TradingPair, CandleData, TickerData } from '@/types/market';
 import { useMarketDataStore } from '@/stores/useMarketDataStore';
 import { sanitizeKlinePayload, sanitizeHistoricalKlines } from '@/utils/binanceDataSanitizer';
 
@@ -11,6 +11,12 @@ export class BinanceWsService {
   private heartbeatTimer: NodeJS.Timeout | null = null;
   private lastMessageTime = Date.now();
   private isExplicitlyClosed = false;
+
+  // Batching buffer to coalesce rapid tick storms into single store updates
+  private pendingTickers: Partial<Record<TradingPair, Partial<TickerData>>> = {};
+  private pendingMarkPrices: Partial<Record<TradingPair, { markPrice: number; fundingRate?: number; nextFundingTime?: number }>> = {};
+  private batchFlushTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly BATCH_FLUSH_INTERVAL_MS = 50;
 
   private readonly streamUrls = [
     'wss://data-stream.binance.vision/stream?streams=btcusdt@ticker/btcusdt@kline_1m/ethusdt@ticker/ethusdt@kline_1m/solusdt@ticker/solusdt@kline_1m',
@@ -81,11 +87,45 @@ export class BinanceWsService {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
+    this.flushBatchedUpdates();
+    if (this.batchFlushTimer) {
+      clearTimeout(this.batchFlushTimer);
+      this.batchFlushTimer = null;
+    }
     if (this.socket) {
+      this.socket.onopen = null;
+      this.socket.onmessage = null;
+      this.socket.onerror = null;
+      this.socket.onclose = null;
       this.socket.close();
       this.socket = null;
     }
     useMarketDataStore.getState().setConnectionStatus('OFFLINE');
+  }
+
+  private scheduleBatchFlush(): void {
+    if (this.batchFlushTimer) return;
+    this.batchFlushTimer = setTimeout(() => {
+      this.flushBatchedUpdates();
+    }, this.BATCH_FLUSH_INTERVAL_MS);
+  }
+
+  public flushBatchedUpdates(): void {
+    if (this.batchFlushTimer) {
+      clearTimeout(this.batchFlushTimer);
+      this.batchFlushTimer = null;
+    }
+
+    const hasTickerUpdates = Object.keys(this.pendingTickers).length > 0;
+    const hasMarkUpdates = Object.keys(this.pendingMarkPrices).length > 0;
+
+    if (hasTickerUpdates || hasMarkUpdates) {
+      const tickers = this.pendingTickers;
+      const marks = this.pendingMarkPrices;
+      this.pendingTickers = {};
+      this.pendingMarkPrices = {};
+      useMarketDataStore.getState().batchUpdateTickers(tickers, marks);
+    }
   }
 
   private handleMessage(rawData: string): void {
@@ -113,13 +153,14 @@ export class BinanceWsService {
             Number.isFinite(volume24h) &&
             Number.isFinite(change24h)
           ) {
-            useMarketDataStore.getState().updateTicker(symbol, {
+            this.pendingTickers[symbol] = {
               price,
               high24h,
               low24h,
               volume24h,
               change24h,
-            });
+            };
+            this.scheduleBatchFlush();
           }
         }
       }
@@ -144,12 +185,12 @@ export class BinanceWsService {
           const nextFundingTime = Number(data.T);
 
           if (Number.isFinite(markPrice) && Number.isFinite(fundingRate)) {
-            useMarketDataStore.getState().updateMarkPrice(
-              symbol,
+            this.pendingMarkPrices[symbol] = {
               markPrice,
               fundingRate,
-              Number.isFinite(nextFundingTime) ? nextFundingTime : Date.now() + 8 * 3600 * 1000
-            );
+              nextFundingTime: Number.isFinite(nextFundingTime) ? nextFundingTime : Date.now() + 8 * 3600 * 1000,
+            };
+            this.scheduleBatchFlush();
           }
         }
       }

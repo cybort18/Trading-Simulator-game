@@ -39,7 +39,7 @@ export interface LiquidationParams {
  * Formula: V = margin * leverage
  */
 export function calculateNotionalValue(margin: number, leverage: number): number {
-  if (margin <= 0 || leverage <= 0) return 0;
+  if (!Number.isFinite(margin) || !Number.isFinite(leverage) || margin <= 0 || leverage <= 0) return 0;
   return margin * leverage;
 }
 
@@ -48,7 +48,16 @@ export function calculateNotionalValue(margin: number, leverage: number): number
  * Formula: Q = (margin * leverage) / entryPrice
  */
 export function calculateQuantity(margin: number, leverage: number, entryPrice: number): number {
-  if (margin <= 0 || leverage <= 0 || entryPrice <= 0) return 0;
+  if (
+    !Number.isFinite(margin) ||
+    !Number.isFinite(leverage) ||
+    !Number.isFinite(entryPrice) ||
+    margin <= 0 ||
+    leverage <= 0 ||
+    entryPrice <= 0
+  ) {
+    return 0;
+  }
   return (margin * leverage) / entryPrice;
 }
 
@@ -63,7 +72,16 @@ export function calculateUnrealizedPnl(
   markPrice: number,
   quantity: number
 ): number {
-  if (quantity <= 0 || entryPrice <= 0 || markPrice <= 0) return 0;
+  if (
+    !Number.isFinite(quantity) ||
+    !Number.isFinite(entryPrice) ||
+    !Number.isFinite(markPrice) ||
+    quantity <= 0 ||
+    entryPrice <= 0 ||
+    markPrice <= 0
+  ) {
+    return 0;
+  }
   if (direction === 'LONG') {
     return quantity * (markPrice - entryPrice);
   } else {
@@ -76,7 +94,7 @@ export function calculateUnrealizedPnl(
  * Formula: (unrealizedPnl / initialMargin) * 100
  */
 export function calculateRoe(unrealizedPnl: number, initialMargin: number): number {
-  if (initialMargin <= 0) return 0;
+  if (!Number.isFinite(unrealizedPnl) || !Number.isFinite(initialMargin) || initialMargin <= 0) return 0;
   return (unrealizedPnl / initialMargin) * 100;
 }
 
@@ -89,7 +107,16 @@ export function calculateMaintenanceMargin(
   markPrice: number,
   mmr: number = DEFAULT_MMR
 ): number {
-  if (quantity <= 0 || markPrice <= 0 || mmr < 0) return 0;
+  if (
+    !Number.isFinite(quantity) ||
+    !Number.isFinite(markPrice) ||
+    !Number.isFinite(mmr) ||
+    quantity <= 0 ||
+    markPrice <= 0 ||
+    mmr < 0
+  ) {
+    return 0;
+  }
   return quantity * markPrice * mmr;
 }
 
@@ -119,13 +146,20 @@ export function calculateLiquidationPrice(params: LiquidationParams): number {
     totalEquity,
   } = params;
 
-  if (entryPrice <= 0 || initialMargin <= 0) return 0;
+  if (
+    !Number.isFinite(entryPrice) ||
+    !Number.isFinite(initialMargin) ||
+    entryPrice <= 0 ||
+    initialMargin <= 0
+  ) {
+    return 0;
+  }
 
   const effectiveQuantity = quantity > 0 ? quantity : calculateQuantity(initialMargin, leverage, entryPrice);
   if (effectiveQuantity <= 0) return 0;
 
   if (marginMode === 'CROSS') {
-    const equity = totalEquity !== undefined ? totalEquity : initialMargin;
+    const equity = totalEquity !== undefined && Number.isFinite(totalEquity) ? totalEquity : initialMargin;
     if (direction === 'LONG') {
       const denom = effectiveQuantity * (1 - mmr - takerFeeRate);
       if (denom <= 0) return 0;
@@ -159,7 +193,7 @@ export function calculateLiquidationPrice(params: LiquidationParams): number {
  * Formula: notionalValue * feeRate
  */
 export function calculateFee(notionalValue: number, feeRate: number = DEFAULT_TAKER_FEE_RATE): number {
-  if (notionalValue <= 0 || feeRate <= 0) return 0;
+  if (!Number.isFinite(notionalValue) || !Number.isFinite(feeRate) || notionalValue <= 0 || feeRate <= 0) return 0;
   return notionalValue * feeRate;
 }
 
@@ -174,8 +208,8 @@ export function calculateSlippagePrice(
   direction: PositionDirection,
   orderSizeUsdt: number
 ): number {
-  if (markPrice <= 0) return 0;
-  if (orderSizeUsdt <= 0) return markPrice;
+  if (!Number.isFinite(markPrice) || markPrice <= 0) return 0;
+  if (!Number.isFinite(orderSizeUsdt) || orderSizeUsdt <= 0) return markPrice;
 
   const baseSlippage = 0.0005 * Math.sqrt(orderSizeUsdt / 100);
   const slippageRate = Math.max(0.0005, baseSlippage);
@@ -191,6 +225,7 @@ export function calculateSlippagePrice(
  * Helper: Round float to given decimal places
  */
 export function roundToDecimals(val: number, decimals: number = 2): number {
+  if (!Number.isFinite(val)) return 0;
   const factor = Math.pow(10, decimals);
   return Math.round((val + Number.EPSILON) * factor) / factor;
 }
@@ -201,15 +236,15 @@ export function roundToDecimals(val: number, decimals: number = 2): number {
  * Clamps dust values with magnitude < 0.0001 to 0.
  */
 export function roundCurrency(val: number): number {
-  if (Math.abs(val) < 0.0001) return 0;
+  if (!Number.isFinite(val) || Math.abs(val) < 0.0001) return 0;
   return Math.round((val + Number.EPSILON) * 100) / 100;
 }
 
 /**
- * Normalizes crypto contract quantities to standard asset decimals (default 6).
+ * Normalizes crypto contract quantities to standard asset decimals (default 8 for satoshi precision).
  */
-export function roundQuantity(val: number, decimals: number = 6): number {
-  if (Math.abs(val) < 1e-9) return 0;
+export function roundQuantity(val: number, decimals: number = 8): number {
+  if (!Number.isFinite(val) || Math.abs(val) < 1e-12) return 0;
   const factor = Math.pow(10, decimals);
   return Math.round((val + Number.EPSILON) * factor) / factor;
 }

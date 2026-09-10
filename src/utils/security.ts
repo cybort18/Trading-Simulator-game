@@ -106,19 +106,24 @@ export function sha256(ascii: string): string {
 /**
  * Normalizes state object into a deterministic canon string for checksum generation
  */
-export function canonicalizeState(state: Record<string, any>): string {
+export function canonicalizeState(state: Record<string, unknown>): string {
   if (!state || typeof state !== 'object') return '';
+
+  const num = (v: unknown): number => {
+    const parsed = typeof v === 'number' ? v : Number(v);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
   
   // Extract critical financial fields
-  const equity = Number((state.equity || 0).toFixed(2));
-  const availableMargin = Number((state.availableMargin || 0).toFixed(2));
-  const lockedMargin = Number((state.lockedMargin || 0).toFixed(2));
-  const realizedPnl = Number((state.realizedPnl || 0).toFixed(2));
-  const winCount = Math.floor(state.winCount || 0);
-  const lossCount = Math.floor(state.lossCount || 0);
-  const totalTrades = Math.floor(state.totalTrades || 0);
-  const streakDay = Math.floor(state.currentStreakDay || 1);
-  const lastClaim = Math.floor(state.lastClaimTimestamp || 0);
+  const equity = Number(num(state.equity).toFixed(2));
+  const availableMargin = Number(num(state.availableMargin).toFixed(2));
+  const lockedMargin = Number(num(state.lockedMargin).toFixed(2));
+  const realizedPnl = Number(num(state.realizedPnl).toFixed(2));
+  const winCount = Math.floor(num(state.winCount));
+  const lossCount = Math.floor(num(state.lossCount));
+  const totalTrades = Math.floor(num(state.totalTrades));
+  const streakDay = Math.floor(num(state.currentStreakDay) || 1);
+  const lastClaim = Math.floor(num(state.lastClaimTimestamp));
 
   return `EQUITY:${equity}|AVAIL:${availableMargin}|LOCK:${lockedMargin}|PNL:${realizedPnl}|W:${winCount}|L:${lossCount}|TRADES:${totalTrades}|STREAK:${streakDay}|CLAIM:${lastClaim}`;
 }
@@ -126,12 +131,12 @@ export function canonicalizeState(state: Record<string, any>): string {
 /**
  * Calculates deterministic HMAC/SHA256 signature of canonicalized state
  */
-export function generateChecksum(state: Record<string, any>, salt: string = INTEGRITY_SALT): string {
+export function generateChecksum(state: Record<string, unknown>, salt: string = INTEGRITY_SALT): string {
   const canon = canonicalizeState(state);
   return sha256(`${canon}::${salt}`);
 }
 
-export interface SealedEnvelope<T = any> {
+export interface SealedEnvelope<T = unknown> {
   state: T;
   version: number;
   checksum: string;
@@ -141,7 +146,7 @@ export interface SealedEnvelope<T = any> {
 /**
  * Encapsulates and signs state with cryptographic checksum
  */
-export function sealState<T extends Record<string, any>>(state: T): string {
+export function sealState<T extends Record<string, unknown>>(state: T): string {
   const checksum = generateChecksum(state);
   const envelope: SealedEnvelope<T> = {
     state,
@@ -152,7 +157,7 @@ export function sealState<T extends Record<string, any>>(state: T): string {
   return JSON.stringify(envelope);
 }
 
-export interface UnsealResult<T = any> {
+export interface UnsealResult<T = unknown> {
   isValid: boolean;
   state: T | null;
   tamperReason?: string;
@@ -161,7 +166,7 @@ export interface UnsealResult<T = any> {
 /**
  * Validates integrity of stored envelope; rejects tampered payloads
  */
-export function unsealState<T extends Record<string, any>>(rawJson: string | null): UnsealResult<T> {
+export function unsealState<T extends Record<string, unknown>>(rawJson: string | null): UnsealResult<T> {
   if (!rawJson) {
     return { isValid: true, state: null };
   }
@@ -175,8 +180,8 @@ export function unsealState<T extends Record<string, any>>(rawJson: string | nul
     }
 
     // Direct envelope format
-    if (parsed.checksum && parsed.state) {
-      const expectedChecksum = generateChecksum(parsed.state);
+    if (parsed.checksum && parsed.state && typeof parsed.state === 'object') {
+      const expectedChecksum = generateChecksum(parsed.state as Record<string, unknown>);
       if (parsed.checksum !== expectedChecksum) {
         return {
           isValid: false,
@@ -184,12 +189,13 @@ export function unsealState<T extends Record<string, any>>(rawJson: string | nul
           tamperReason: `ILLEGAL_CHECKSUM_MISMATCH: expected ${expectedChecksum} but found ${parsed.checksum}`,
         };
       }
-      return { isValid: true, state: parsed.state };
+      return { isValid: true, state: parsed.state as T };
     }
 
     // Unsigned direct state (e.g. initial dev state or first migration)
-    return { isValid: true, state: parsed };
-  } catch (err: any) {
-    return { isValid: false, state: null, tamperReason: `PARSE_EXCEPTION: ${err.message}` };
+    return { isValid: true, state: parsed as T };
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    return { isValid: false, state: null, tamperReason: `PARSE_EXCEPTION: ${errMsg}` };
   }
 }

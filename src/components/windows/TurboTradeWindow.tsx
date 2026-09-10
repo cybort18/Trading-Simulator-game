@@ -46,6 +46,7 @@ export const TurboTradeWindow: React.FC = () => {
   const [orderSize, setOrderSize] = useState<string>('5.00');
   const [bottomTab, setBottomTab] = useState<'positions' | 'history'>('positions');
   const [fundingCountdown, setFundingCountdown] = useState<string>('08:00:00');
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   const [orderError, setOrderError] = useState<string | null>(null);
 
@@ -698,7 +699,9 @@ export const TurboTradeWindow: React.FC = () => {
           {/* Execution Action Buttons */}
           <div className="flex flex-col gap-1.5 pt-1">
             <button
+              disabled={isSubmitting}
               onClick={() => {
+                if (isSubmitting) return;
                 setOrderError(null);
                 const margin = parseFloat(orderSize);
                 if (isNaN(margin) || margin <= 0) {
@@ -710,32 +713,44 @@ export const TurboTradeWindow: React.FC = () => {
                   setOrderError('Enter valid limit price');
                   return;
                 }
-                const res = openPosition(
-                  {
-                    pair: selectedPair,
-                    direction: 'LONG',
-                    marginMode: marginMode.toUpperCase() as 'ISOLATED' | 'CROSS',
-                    leverage,
-                    margin,
-                    type: orderType.toUpperCase() as 'MARKET' | 'LIMIT',
-                    limitPrice: parsedLimit,
-                  },
-                  orderType === 'limit' ? parsedLimit : currentPrice
-                );
-                if (!res.success) {
-                  setOrderError(res.error || 'Order failed');
-                } else {
-                  soundFXService.playOrderExecuted();
+
+                setIsSubmitting(true);
+                try {
+                  const res = openPosition(
+                    {
+                      pair: selectedPair,
+                      direction: 'LONG',
+                      marginMode: marginMode.toUpperCase() as 'ISOLATED' | 'CROSS',
+                      leverage,
+                      margin,
+                      type: orderType.toUpperCase() as 'MARKET' | 'LIMIT',
+                      limitPrice: parsedLimit,
+                    },
+                    orderType === 'limit' ? parsedLimit : currentPrice
+                  );
+                  if (!res.success) {
+                    setOrderError(res.error || 'Order failed');
+                  } else {
+                    soundFXService.playOrderExecuted();
+                  }
+                } finally {
+                  setTimeout(() => setIsSubmitting(false), 300);
                 }
               }}
-              className="win-btn bg-[#008531] text-white font-bold py-2 flex items-center justify-center space-x-1.5 hover:bg-[#009938] active:translate-x-0.5 active:translate-y-0.5 shadow"
+              className={`win-btn bg-[#008531] text-white font-bold py-2 flex items-center justify-center space-x-1.5 hover:bg-[#009938] active:translate-x-0.5 active:translate-y-0.5 shadow ${
+                isSubmitting ? 'opacity-60 cursor-not-allowed' : ''
+              }`}
             >
               <PixelIcon name="arrow_up" size={14} className="text-crt-bullish" />
-              <span className="text-[11px] tracking-wide uppercase">OPEN LONG (BUY)</span>
+              <span className="text-[11px] tracking-wide uppercase">
+                {isSubmitting ? 'EXECUTING...' : 'OPEN LONG (BUY)'}
+              </span>
             </button>
 
             <button
+              disabled={isSubmitting}
               onClick={() => {
+                if (isSubmitting) return;
                 setOrderError(null);
                 const margin = parseFloat(orderSize);
                 if (isNaN(margin) || margin <= 0) {
@@ -747,28 +762,38 @@ export const TurboTradeWindow: React.FC = () => {
                   setOrderError('Enter valid limit price');
                   return;
                 }
-                const res = openPosition(
-                  {
-                    pair: selectedPair,
-                    direction: 'SHORT',
-                    marginMode: marginMode.toUpperCase() as 'ISOLATED' | 'CROSS',
-                    leverage,
-                    margin,
-                    type: orderType.toUpperCase() as 'MARKET' | 'LIMIT',
-                    limitPrice: parsedLimit,
-                  },
-                  orderType === 'limit' ? parsedLimit : currentPrice
-                );
-                if (!res.success) {
-                  setOrderError(res.error || 'Order failed');
-                } else {
-                  soundFXService.playOrderExecuted();
+
+                setIsSubmitting(true);
+                try {
+                  const res = openPosition(
+                    {
+                      pair: selectedPair,
+                      direction: 'SHORT',
+                      marginMode: marginMode.toUpperCase() as 'ISOLATED' | 'CROSS',
+                      leverage,
+                      margin,
+                      type: orderType.toUpperCase() as 'MARKET' | 'LIMIT',
+                      limitPrice: parsedLimit,
+                    },
+                    orderType === 'limit' ? parsedLimit : currentPrice
+                  );
+                  if (!res.success) {
+                    setOrderError(res.error || 'Order failed');
+                  } else {
+                    soundFXService.playOrderExecuted();
+                  }
+                } finally {
+                  setTimeout(() => setIsSubmitting(false), 300);
                 }
               }}
-              className="win-btn bg-[#BA1A1A] text-white font-bold py-2 flex items-center justify-center space-x-1.5 hover:bg-[#CC2020] active:translate-x-0.5 active:translate-y-0.5 shadow"
+              className={`win-btn bg-[#BA1A1A] text-white font-bold py-2 flex items-center justify-center space-x-1.5 hover:bg-[#CC2020] active:translate-x-0.5 active:translate-y-0.5 shadow ${
+                isSubmitting ? 'opacity-60 cursor-not-allowed' : ''
+              }`}
             >
               <PixelIcon name="arrow_down" size={14} className="text-white" />
-              <span className="text-[11px] tracking-wide uppercase">OPEN SHORT (SELL)</span>
+              <span className="text-[11px] tracking-wide uppercase">
+                {isSubmitting ? 'EXECUTING...' : 'OPEN SHORT (SELL)'}
+              </span>
             </button>
           </div>
         </div>

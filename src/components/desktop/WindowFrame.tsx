@@ -28,6 +28,8 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
 
   const [isDragging, setIsDragging] = useState(false);
   const dragOffsetRef = useRef<{ offsetX: number; offsetY: number }>({ offsetX: 0, offsetY: 0 });
+  const rafRef = useRef<number | null>(null);
+  const pendingPosRef = useRef<{ x: number; y: number } | null>(null);
 
   const isMaximized = windowState?.isMaximized ?? false;
 
@@ -52,7 +54,24 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
 
       const newX = e.clientX - dragOffsetRef.current.offsetX;
       const newY = e.clientY - dragOffsetRef.current.offsetY;
-      updatePosition(id, { x: newX, y: newY });
+
+      // Viewport bounds clamping to keep window titlebar visible
+      const viewportWidth = typeof window !== 'undefined' && window.innerWidth ? window.innerWidth : 1200;
+      const viewportHeight = typeof window !== 'undefined' && window.innerHeight ? window.innerHeight : 800;
+      const clampedX = Math.max(0, Math.min(newX, viewportWidth - 80));
+      const clampedY = Math.max(0, Math.min(newY, viewportHeight - 60));
+
+      pendingPosRef.current = { x: clampedX, y: clampedY };
+
+      if (rafRef.current === null) {
+        rafRef.current = requestAnimationFrame(() => {
+          if (pendingPosRef.current) {
+            updatePosition(id, pendingPosRef.current);
+            pendingPosRef.current = null;
+          }
+          rafRef.current = null;
+        });
+      }
     },
     [isDragging, isMaximized, id, updatePosition]
   );
@@ -60,6 +79,14 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
   const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     if (isDragging) {
       setIsDragging(false);
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      if (pendingPosRef.current) {
+        updatePosition(id, pendingPosRef.current);
+        pendingPosRef.current = null;
+      }
       try {
         (e.target as HTMLElement).releasePointerCapture(e.pointerId);
       } catch {
@@ -70,9 +97,21 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
 
   // Prevent background drag leaking
   useEffect(() => {
-    const handleGlobalUp = () => setIsDragging(false);
+    const handleGlobalUp = () => {
+      setIsDragging(false);
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+    };
     window.addEventListener('pointerup', handleGlobalUp);
-    return () => window.removeEventListener('pointerup', handleGlobalUp);
+    return () => {
+      window.removeEventListener('pointerup', handleGlobalUp);
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+    };
   }, []);
 
   // Safe early return ONLY after all hooks are executed

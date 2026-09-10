@@ -19,6 +19,10 @@ interface MarketDataState {
     nextFundingTime?: number
   ) => void;
   updateLatestCandle: (pair: TradingPair, candle: CandleData) => void;
+  batchUpdateTickers: (
+    tickerUpdates: Partial<Record<TradingPair, Partial<TickerData>>>,
+    markPriceUpdates?: Partial<Record<TradingPair, { markPrice: number; fundingRate?: number; nextFundingTime?: number }>>
+  ) => void;
   setConnectionStatus: (status: ConnectionStatus, latency?: number) => void;
 }
 
@@ -161,6 +165,58 @@ export const useMarketDataStore = create<MarketDataState>((set, get) => ({
         },
       },
     });
+  },
+
+  batchUpdateTickers: (tickerUpdates, markPriceUpdates = {}) => {
+    const { tickers, prices, priceDirections } = get();
+    let hasChanges = false;
+    const nextPrices = { ...prices };
+    const nextDirections = { ...priceDirections };
+    const nextTickers = { ...tickers };
+
+    for (const [p, data] of Object.entries(tickerUpdates) as Array<[TradingPair, Partial<TickerData> | undefined]>) {
+      if (!data) continue;
+      const prev = nextTickers[p];
+      if (!prev) continue;
+      hasChanges = true;
+      const newPrice = data.price !== undefined ? data.price : prev.price;
+      const oldPrice = nextPrices[p] || prev.price;
+      const dir: 'up' | 'down' | 'same' =
+        newPrice > oldPrice ? 'up' : newPrice < oldPrice ? 'down' : nextDirections[p];
+
+      nextPrices[p] = newPrice;
+      nextDirections[p] = dir;
+      nextTickers[p] = { ...prev, ...data, price: newPrice };
+    }
+
+    if (markPriceUpdates) {
+      for (const [p, markData] of Object.entries(markPriceUpdates) as Array<[TradingPair, { markPrice: number; fundingRate?: number; nextFundingTime?: number } | undefined]>) {
+        if (!markData) continue;
+        const current = nextTickers[p];
+        if (!current) continue;
+        hasChanges = true;
+        const oldPrice = nextPrices[p] || current.price;
+        const dir: 'up' | 'down' | 'same' =
+          markData.markPrice > oldPrice ? 'up' : markData.markPrice < oldPrice ? 'down' : nextDirections[p];
+
+        nextPrices[p] = markData.markPrice;
+        nextDirections[p] = dir;
+        nextTickers[p] = {
+          ...current,
+          price: markData.markPrice,
+          fundingRate: markData.fundingRate !== undefined ? markData.fundingRate : current.fundingRate,
+          nextFundingTime: markData.nextFundingTime !== undefined ? markData.nextFundingTime : current.nextFundingTime,
+        };
+      }
+    }
+
+    if (hasChanges) {
+      set({
+        prices: nextPrices,
+        priceDirections: nextDirections,
+        tickers: nextTickers,
+      });
+    }
   },
 
   setConnectionStatus: (status: ConnectionStatus, latency?: number) => {

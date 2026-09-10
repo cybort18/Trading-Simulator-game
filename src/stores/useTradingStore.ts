@@ -14,6 +14,9 @@ import {
   calculateLiquidationPrice,
   calculateFee,
   calculateSlippagePrice,
+  roundCurrency,
+  roundQuantity,
+  roundToDecimals,
   MAINTENANCE_MARGIN_RATES,
   DEFAULT_MMR,
   DEFAULT_TAKER_FEE_RATE,
@@ -78,8 +81,20 @@ export const useTradingStore = create<TradingStoreState>()(
           limitPrice,
         } = params;
 
-        if (margin <= 0 || leverage <= 0) {
+        if (
+          !Number.isFinite(margin) ||
+          !Number.isFinite(leverage) ||
+          margin <= 0 ||
+          leverage <= 0 ||
+          isNaN(margin) ||
+          isNaN(leverage)
+        ) {
           return { success: false, error: 'Invalid margin or leverage value' };
+        }
+
+        const normalizedMargin = roundCurrency(margin);
+        if (normalizedMargin <= 0) {
+          return { success: false, error: 'Margin amount must be greater than zero' };
         }
 
         // Determine base price
@@ -98,19 +113,20 @@ export const useTradingStore = create<TradingStoreState>()(
         }
 
         // Apply slippage for market orders
-        const notional = calculateNotionalValue(margin, leverage);
-        const fillPrice = type === 'MARKET'
+        const notional = calculateNotionalValue(normalizedMargin, leverage);
+        const rawFillPrice = type === 'MARKET'
           ? calculateSlippagePrice(markPrice, direction, notional)
           : (limitPrice || markPrice);
+        const fillPrice = roundToDecimals(rawFillPrice, 2);
 
-        const quantity = calculateQuantity(margin, leverage, fillPrice);
-        const openingFee = calculateFee(notional, DEFAULT_TAKER_FEE_RATE);
+        const quantity = roundQuantity(calculateQuantity(normalizedMargin, leverage, fillPrice));
+        const openingFee = roundCurrency(calculateFee(notional, DEFAULT_TAKER_FEE_RATE));
 
-        // Required upfront = margin + openingFee
-        if (wallet.availableMargin < margin + openingFee) {
+        // Required upfront = normalizedMargin + openingFee
+        if (wallet.availableMargin < normalizedMargin + openingFee) {
           return {
             success: false,
-            error: `Insufficient available balance: Need $${(margin + openingFee).toFixed(2)} USDT (Margin: $${margin.toFixed(2)}, Fee: $${openingFee.toFixed(2)})`,
+            error: `Insufficient available balance: Need $${(normalizedMargin + openingFee).toFixed(2)} USDT (Margin: $${normalizedMargin.toFixed(2)}, Fee: $${openingFee.toFixed(2)})`,
           };
         }
 
@@ -118,16 +134,16 @@ export const useTradingStore = create<TradingStoreState>()(
         wallet.deductFee(openingFee);
 
         // Lock margin
-        const locked = wallet.lockMargin(margin);
+        const locked = wallet.lockMargin(normalizedMargin);
         if (!locked) {
           return { success: false, error: 'Failed to lock margin in wallet' };
         }
 
         const mmr = MAINTENANCE_MARGIN_RATES[pair] ?? DEFAULT_MMR;
-        const liquidationPrice = calculateLiquidationPrice({
+        const rawLiq = calculateLiquidationPrice({
           direction,
           entryPrice: fillPrice,
-          initialMargin: margin,
+          initialMargin: normalizedMargin,
           quantity,
           leverage,
           mmr,
@@ -135,6 +151,7 @@ export const useTradingStore = create<TradingStoreState>()(
           marginMode,
           totalEquity: wallet.equity,
         });
+        const liquidationPrice = roundToDecimals(rawLiq, 2);
 
         const newPosition: Position = {
           id: generateId(),
@@ -143,9 +160,9 @@ export const useTradingStore = create<TradingStoreState>()(
           marginMode,
           leverage,
           entryPrice: fillPrice,
-          markPrice,
+          markPrice: roundToDecimals(markPrice, 2),
           quantity,
-          initialMargin: margin,
+          initialMargin: normalizedMargin,
           liquidationPrice,
           unrealizedPnl: 0,
           roe: 0,
@@ -181,7 +198,7 @@ export const useTradingStore = create<TradingStoreState>()(
         // Slippage on exit
         const exitDirection = position.direction === 'LONG' ? 'SHORT' : 'LONG';
         const notional = position.quantity * markPrice;
-        const actualExitPrice = calculateSlippagePrice(markPrice, exitDirection, notional);
+        const actualExitPrice = roundToDecimals(calculateSlippagePrice(markPrice, exitDirection, notional), 2);
 
         // Unrealized PnL at exit price
         const grossPnl = calculateUnrealizedPnl(
@@ -191,9 +208,9 @@ export const useTradingStore = create<TradingStoreState>()(
           position.quantity
         );
 
-        const closingFee = calculateFee(position.quantity * actualExitPrice, DEFAULT_TAKER_FEE_RATE);
-        const netRealizedPnl = grossPnl - closingFee;
-        const roe = calculateRoe(netRealizedPnl, position.initialMargin);
+        const closingFee = roundCurrency(calculateFee(position.quantity * actualExitPrice, DEFAULT_TAKER_FEE_RATE));
+        const netRealizedPnl = roundCurrency(grossPnl - closingFee);
+        const roe = roundToDecimals(calculateRoe(netRealizedPnl, position.initialMargin), 2);
 
         // Release margin and register PnL in wallet
         wallet.recordTradeResult(netRealizedPnl, position.initialMargin);
@@ -234,6 +251,9 @@ export const useTradingStore = create<TradingStoreState>()(
         // On liquidation, entire initial margin is consumed
         wallet.recordTradeResult(-position.initialMargin, position.initialMargin);
 
+        const trigger = roundToDecimals(triggerPrice, 2);
+        const feesPaid = roundCurrency(calculateFee(position.quantity * trigger, DEFAULT_TAKER_FEE_RATE));
+
         const historyItem: TradeHistoryItem = {
           id: generateId(),
           positionId: position.id,
@@ -241,12 +261,12 @@ export const useTradingStore = create<TradingStoreState>()(
           direction: position.direction,
           leverage: position.leverage,
           entryPrice: position.entryPrice,
-          exitPrice: triggerPrice,
+          exitPrice: trigger,
           quantity: position.quantity,
           initialMargin: position.initialMargin,
           realizedPnl: -position.initialMargin,
           roe: -100.0,
-          feesPaid: calculateFee(position.quantity * triggerPrice, DEFAULT_TAKER_FEE_RATE),
+          feesPaid,
           status: 'LIQUIDATED',
           openedAt: position.createdAt,
           closedAt: Date.now(),
@@ -255,7 +275,7 @@ export const useTradingStore = create<TradingStoreState>()(
         const liquidationEvent: LiquidationEvent = {
           id: generateId(),
           position,
-          liquidationPrice: triggerPrice,
+          liquidationPrice: trigger,
           wipedMargin: position.initialMargin,
           timestamp: Date.now(),
         };
@@ -282,13 +302,15 @@ export const useTradingStore = create<TradingStoreState>()(
               return pos;
             }
 
-            const uPnL = calculateUnrealizedPnl(pos.direction, pos.entryPrice, mark, pos.quantity);
-            const roe = calculateRoe(uPnL, pos.initialMargin);
+            const roundedMark = roundToDecimals(mark, 2);
+            const rawPnl = calculateUnrealizedPnl(pos.direction, pos.entryPrice, roundedMark, pos.quantity);
+            const uPnL = roundCurrency(rawPnl);
+            const roe = roundToDecimals(calculateRoe(uPnL, pos.initialMargin), 2);
             totalUnrealizedPnl += uPnL;
 
             return {
               ...pos,
-              markPrice: mark,
+              markPrice: roundedMark,
               unrealizedPnl: uPnL,
               roe,
             };
@@ -297,7 +319,7 @@ export const useTradingStore = create<TradingStoreState>()(
           return { positions: updatedPositions };
         });
 
-        wallet.recalculateEquity(totalUnrealizedPnl);
+        wallet.recalculateEquity(roundCurrency(totalUnrealizedPnl));
       },
 
       closeLiquidationModal: () => {
