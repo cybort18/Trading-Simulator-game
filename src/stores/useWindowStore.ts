@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { WindowId, WindowPosition, WindowSize, WindowState } from '@/types/window';
+import { safeStateStorage } from '@/utils/safeStorage';
 
 interface WindowStoreState {
   windows: Record<WindowId, WindowState>;
@@ -14,12 +15,14 @@ interface WindowStoreState {
   updateSize: (id: WindowId, size: WindowSize) => void;
 }
 
+const isWelcomeHidden = typeof window !== 'undefined' && safeStateStorage.getItem('CRYPTOOS_98_HIDE_WELCOME') === 'true';
+
 const INITIAL_WINDOWS: Record<WindowId, WindowState> = {
   welcome: {
     id: 'welcome',
     title: 'System Notice - Welcome New Trader!',
     icon: 'warning',
-    isOpen: true,
+    isOpen: !isWelcomeHidden,
     isMinimized: false,
     isMaximized: false,
     position: { x: 260, y: 70 },
@@ -79,7 +82,7 @@ const INITIAL_WINDOWS: Record<WindowId, WindowState> = {
 
 export const useWindowStore = create<WindowStoreState>((set, get) => ({
   windows: INITIAL_WINDOWS,
-  activeWindowId: 'welcome',
+  activeWindowId: !isWelcomeHidden ? 'welcome' : 'turbotrade',
   maxZIndex: 36,
 
   openWindow: (id: WindowId) => {

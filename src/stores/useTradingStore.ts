@@ -34,6 +34,7 @@ export interface TradingStoreState {
   tradeHistory: TradeHistoryItem[];
   latestLiquidation: LiquidationEvent | null;
   isLiquidationModalOpen: boolean;
+  selectedFlexTrade: Position | TradeHistoryItem | null;
 
   // Actions
   openPosition: (params: OpenOrderParams, executionPrice?: number) => { success: boolean; error?: string; position?: Position };
@@ -42,6 +43,7 @@ export interface TradingStoreState {
   updatePricesAndPnL: (markPrices: Record<string, number>) => void;
   closeLiquidationModal: () => void;
   clearTradeHistory: () => void;
+  setSelectedFlexTrade: (trade: Position | TradeHistoryItem | null) => void;
 }
 
 function generateId(): string {
@@ -58,6 +60,11 @@ export const useTradingStore = create<TradingStoreState>()(
       tradeHistory: [],
       latestLiquidation: null,
       isLiquidationModalOpen: false,
+      selectedFlexTrade: null,
+
+      setSelectedFlexTrade: (trade: Position | TradeHistoryItem | null) => {
+        set({ selectedFlexTrade: trade });
+      },
 
       openPosition: (params: OpenOrderParams, executionPrice?: number) => {
         const wallet = useWalletStore.getState();

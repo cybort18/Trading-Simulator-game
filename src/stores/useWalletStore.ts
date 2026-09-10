@@ -3,6 +3,22 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { safeStateStorage } from '@/utils/safeStorage';
 import { roundCurrency } from '@/utils/simulationMath';
 
+export interface DailyRewardTier {
+  day: number;
+  reward: number;
+  label: string;
+}
+
+export const DAILY_REWARD_TIERS: DailyRewardTier[] = [
+  { day: 1, reward: 2.00, label: '+2 USDT' },
+  { day: 2, reward: 5.00, label: '+5 USDT' },
+  { day: 3, reward: 8.00, label: '+8 USDT' },
+  { day: 4, reward: 10.00, label: '+10 USDT' },
+  { day: 5, reward: 15.00, label: '+15 USDT' },
+  { day: 6, reward: 25.00, label: '+25 USDT' },
+  { day: 7, reward: 50.00, label: '+50 USDT + Mystery Box' },
+];
+
 export interface WalletState {
   equity: number;
   availableMargin: number;
@@ -12,6 +28,8 @@ export interface WalletState {
   lossCount: number;
   totalTrades: number;
   initialBalance: number;
+  currentStreakDay: number;
+  lastClaimTimestamp: number;
 
   // Actions
   lockMargin: (amount: number) => boolean;
@@ -21,12 +39,14 @@ export interface WalletState {
   applyFundingPayment: (payment: number) => void;
   recalculateEquity: (totalUnrealizedPnl: number) => void;
   claimFaucet: (amount?: number) => boolean;
+  claimDailyReward: () => { success: boolean; amount?: number; error?: string };
   resetWallet: (amount?: number) => void;
 
   // Computed getters
   getWinRate: () => number;
   getAllTimeRoi: () => number;
   isFaucetAvailable: () => boolean;
+  getTimeUntilNextDailyClaim: () => number;
 }
 
 const DEFAULT_STARTING_BALANCE = 10.00;
@@ -42,6 +62,8 @@ export const useWalletStore = create<WalletState>()(
       lossCount: 0,
       totalTrades: 0,
       initialBalance: DEFAULT_STARTING_BALANCE,
+      currentStreakDay: 1,
+      lastClaimTimestamp: 0,
 
       lockMargin: (amount: number) => {
         const state = get();
@@ -131,6 +153,43 @@ export const useWalletStore = create<WalletState>()(
         return false;
       },
 
+      claimDailyReward: () => {
+        const state = get();
+        const now = Date.now();
+        const COOLDOWN_MS = 24 * 60 * 60 * 1000;
+        const GRACE_PERIOD_MS = 48 * 60 * 60 * 1000;
+
+        if (state.lastClaimTimestamp > 0 && now - state.lastClaimTimestamp < COOLDOWN_MS) {
+          return { success: false, error: 'Daily reward is on 24-hour cooldown.' };
+        }
+
+        let dayToClaim = state.currentStreakDay || 1;
+        if (state.lastClaimTimestamp > 0 && now - state.lastClaimTimestamp > GRACE_PERIOD_MS) {
+          dayToClaim = 1;
+        }
+
+        const tier = DAILY_REWARD_TIERS[dayToClaim - 1] || DAILY_REWARD_TIERS[0];
+        const rewardAmount = tier.reward;
+        const nextDay = dayToClaim >= 7 ? 1 : dayToClaim + 1;
+
+        set({
+          availableMargin: roundCurrency(state.availableMargin + rewardAmount),
+          equity: roundCurrency(state.equity + rewardAmount),
+          currentStreakDay: nextDay,
+          lastClaimTimestamp: now,
+        });
+
+        return { success: true, amount: rewardAmount };
+      },
+
+      getTimeUntilNextDailyClaim: () => {
+        const { lastClaimTimestamp } = get();
+        if (!lastClaimTimestamp) return 0;
+        const elapsed = Date.now() - lastClaimTimestamp;
+        const COOLDOWN_MS = 24 * 60 * 60 * 1000;
+        return Math.max(0, COOLDOWN_MS - elapsed);
+      },
+
       resetWallet: (amount: number = DEFAULT_STARTING_BALANCE) => {
         set({
           equity: amount,
@@ -141,6 +200,8 @@ export const useWalletStore = create<WalletState>()(
           lossCount: 0,
           totalTrades: 0,
           initialBalance: amount,
+          currentStreakDay: 1,
+          lastClaimTimestamp: 0,
         });
       },
 
@@ -173,6 +234,8 @@ export const useWalletStore = create<WalletState>()(
         lossCount: state.lossCount,
         totalTrades: state.totalTrades,
         initialBalance: state.initialBalance,
+        currentStreakDay: state.currentStreakDay,
+        lastClaimTimestamp: state.lastClaimTimestamp,
       }),
     }
   )

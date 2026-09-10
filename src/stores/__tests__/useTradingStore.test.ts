@@ -158,4 +158,26 @@ describe('useTradingStore', () => {
     expect(wallet.availableMargin).toBeCloseTo(4.95, 2);
     expect(wallet.lossCount).toBe(1);
   });
+
+  it('sets and clears selected flex card trade', () => {
+    expect(useTradingStore.getState().selectedFlexTrade).toBeNull();
+
+    useTradingStore.getState().openPosition(
+      {
+        pair: 'BTCUSDT',
+        direction: 'LONG',
+        leverage: 20,
+        margin: 5.00,
+        type: 'MARKET',
+      },
+      60000.0
+    );
+
+    const pos = useTradingStore.getState().positions[0];
+    useTradingStore.getState().setSelectedFlexTrade(pos);
+    expect(useTradingStore.getState().selectedFlexTrade).toEqual(pos);
+
+    useTradingStore.getState().setSelectedFlexTrade(null);
+    expect(useTradingStore.getState().selectedFlexTrade).toBeNull();
+  });
 });

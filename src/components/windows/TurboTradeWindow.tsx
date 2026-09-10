@@ -4,9 +4,19 @@ import { PixelIcon } from '@/components/common/PixelIcon';
 import { useMarketDataStore } from '@/stores/useMarketDataStore';
 import { useTradingStore } from '@/stores/useTradingStore';
 import { useWalletStore } from '@/stores/useWalletStore';
+import { useWindowStore } from '@/stores/useWindowStore';
 import { fundingRateEngine } from '@/services/FundingRateEngine';
 import { TradingPair } from '@/types/market';
 import { RetroCandleChart } from '@/components/trading/RetroCandleChart';
+import {
+  calculateLiquidationPrice,
+  calculateQuantity,
+  DEFAULT_MMR,
+  DEFAULT_TAKER_FEE_RATE,
+  MAINTENANCE_MARGIN_RATES,
+} from '@/utils/simulationMath';
+
+const LEVERAGE_SNAPS = [1, 5, 10, 20, 50, 100];
 
 export const TurboTradeWindow: React.FC = () => {
   const selectedPair = useMarketDataStore((state) => state.selectedPair);
@@ -23,10 +33,14 @@ export const TurboTradeWindow: React.FC = () => {
   const tradeHistory = useTradingStore((state) => state.tradeHistory);
   const openPosition = useTradingStore((state) => state.openPosition);
   const closePosition = useTradingStore((state) => state.closePosition);
+  const setSelectedFlexTrade = useTradingStore((state) => state.setSelectedFlexTrade);
+  const openWindow = useWindowStore((state) => state.openWindow);
+  const focusWindow = useWindowStore((state) => state.focusWindow);
 
   const [timeframe, setTimeframe] = useState<string>('1m');
   const [leverage, setLeverage] = useState<number>(20);
   const [orderType, setOrderType] = useState<'market' | 'limit'>('market');
+  const [limitPriceInput, setLimitPriceInput] = useState<string>('');
   const [marginMode, setMarginMode] = useState<'isolated' | 'cross'>('isolated');
   const [orderSize, setOrderSize] = useState<string>('5.00');
   const [bottomTab, setBottomTab] = useState<'positions' | 'history'>('positions');
@@ -37,6 +51,13 @@ export const TurboTradeWindow: React.FC = () => {
   const currentPrice = prices[selectedPair] || 64281.5;
   const currentTicker = tickers[selectedPair];
   const direction = priceDirections[selectedPair];
+
+  // Keep limit price input in sync when pair changes if user hasn't typed custom price
+  useEffect(() => {
+    if (currentPrice > 0) {
+      setLimitPriceInput(currentPrice.toFixed(2));
+    }
+  }, [selectedPair]);
 
   // Dynamic countdown timer using FundingRateEngine
   useEffect(() => {
@@ -49,14 +70,41 @@ export const TurboTradeWindow: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Precise mathematical liquidation price calculation from SIMULATION_ENGINE.md
-  const mmr = selectedPair === 'BTCUSDT' ? 0.005 : selectedPair === 'ETHUSDT' ? 0.0065 : 0.01;
-  const takerFee = 0.0005;
-  const estLiqLong = currentPrice * ((1 - 1 / leverage) / (1 - mmr - takerFee));
-  const estLiqShort = currentPrice * ((1 + 1 / leverage) / (1 + mmr + takerFee));
+  const mmr = MAINTENANCE_MARGIN_RATES[selectedPair] || DEFAULT_MMR;
+  const effectiveEntryPrice = orderType === 'limit' && parseFloat(limitPriceInput) > 0
+    ? parseFloat(limitPriceInput)
+    : currentPrice;
 
-  const notional = (Number(orderSize) || 0) * leverage;
-  const fee = notional * takerFee;
+  const marginAmount = Number(orderSize) || 0;
+  const notional = marginAmount * leverage;
+  const fee = notional * DEFAULT_TAKER_FEE_RATE;
+  const maxPositionSize = availableMargin * leverage;
+
+  const effectiveMargin = marginAmount > 0 ? marginAmount : 5;
+  const effectiveQty = calculateQuantity(effectiveMargin, leverage, effectiveEntryPrice);
+
+  const estLiqLong = calculateLiquidationPrice({
+    direction: 'LONG',
+    entryPrice: effectiveEntryPrice,
+    initialMargin: effectiveMargin,
+    quantity: effectiveQty,
+    leverage,
+    mmr,
+    takerFeeRate: DEFAULT_TAKER_FEE_RATE,
+    marginMode: marginMode.toUpperCase() as 'ISOLATED' | 'CROSS',
+    totalEquity: equity,
+  });
+  const estLiqShort = calculateLiquidationPrice({
+    direction: 'SHORT',
+    entryPrice: effectiveEntryPrice,
+    initialMargin: effectiveMargin,
+    quantity: effectiveQty,
+    leverage,
+    mmr,
+    takerFeeRate: DEFAULT_TAKER_FEE_RATE,
+    marginMode: marginMode.toUpperCase() as 'ISOLATED' | 'CROSS',
+    totalEquity: equity,
+  });
 
   const pairLabelMap: Record<TradingPair, string> = {
     BTCUSDT: 'BTC/USDT',
@@ -325,12 +373,25 @@ export const TurboTradeWindow: React.FC = () => {
                               {isBullish ? '+' : ''}${pos.unrealizedPnl.toFixed(2)} ({isBullish ? '+' : ''}{pos.roe.toFixed(2)}%)
                             </td>
                             <td className="p-1 text-right">
-                              <button
-                                onClick={() => closePosition(pos.id, mark)}
-                                className="win-btn text-[9px] px-1.5 py-0.5 text-error font-bold active:translate-x-0.5 active:translate-y-0.5"
-                              >
-                                Close [X]
-                              </button>
+                              <div className="flex items-center justify-end space-x-1">
+                                <button
+                                  onClick={() => {
+                                    setSelectedFlexTrade(pos);
+                                    openWindow('flexcard');
+                                    focusWindow('flexcard');
+                                  }}
+                                  className="win-btn text-[9px] px-1.5 py-0.5 text-titlebar-navy font-bold active:translate-x-0.5 active:translate-y-0.5"
+                                  title="Share PnL Flex Card"
+                                >
+                                  Share ↗
+                                </button>
+                                <button
+                                  onClick={() => closePosition(pos.id, mark)}
+                                  className="win-btn text-[9px] px-1.5 py-0.5 text-error font-bold active:translate-x-0.5 active:translate-y-0.5"
+                                >
+                                  Close [X]
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -356,7 +417,7 @@ export const TurboTradeWindow: React.FC = () => {
                         <th className="p-1">Exit</th>
                         <th className="p-1">Realized PnL</th>
                         <th className="p-1">ROE %</th>
-                        <th className="p-1 text-right">Status</th>
+                        <th className="p-1 text-right">Status / Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#1F1F1F]">
@@ -378,15 +439,28 @@ export const TurboTradeWindow: React.FC = () => {
                             {item.roe >= 0 ? '+' : ''}{item.roe.toFixed(2)}%
                           </td>
                           <td className="p-1 text-right">
-                            <span
-                              className={`px-1 py-0.2 text-[8px] font-bold border ${
-                                item.status === 'LIQUIDATED'
-                                  ? 'bg-[#440000] text-[#FF6666] border-[#FF3333]'
-                                  : 'bg-[#003311] text-[#00FF66] border-[#00FF66]'
-                              }`}
-                            >
-                              {item.status}
-                            </span>
+                            <div className="flex items-center justify-end space-x-1">
+                              <span
+                                className={`px-1 py-0.2 text-[8px] font-bold border ${
+                                  item.status === 'LIQUIDATED'
+                                    ? 'bg-[#440000] text-[#FF6666] border-[#FF3333]'
+                                    : 'bg-[#003311] text-[#00FF66] border-[#00FF66]'
+                                }`}
+                              >
+                                {item.status}
+                              </span>
+                              <button
+                                onClick={() => {
+                                  setSelectedFlexTrade(item);
+                                  openWindow('flexcard');
+                                  focusWindow('flexcard');
+                                }}
+                                className="win-btn text-[8px] px-1 py-0.2 text-titlebar-navy font-bold active:translate-x-0.5 active:translate-y-0.5"
+                                title="Share Flex Card"
+                              >
+                                Share ↗
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -407,49 +481,84 @@ export const TurboTradeWindow: React.FC = () => {
             <button
               onClick={() => setOrderType('market')}
               className={`py-1 ${
-                orderType === 'market' ? 'win-btn-pressed bg-win-pressed' : 'win-btn'
+                orderType === 'market' ? 'win-btn-pressed bg-win-pressed font-extrabold text-titlebar-navy' : 'win-btn'
               }`}
             >
               [ Market ]
             </button>
             <button
-              onClick={() => setOrderType('limit')}
+              onClick={() => {
+                setOrderType('limit');
+                if (!limitPriceInput && currentPrice > 0) {
+                  setLimitPriceInput(currentPrice.toFixed(2));
+                }
+              }}
               className={`py-1 ${
-                orderType === 'limit' ? 'win-btn-pressed bg-win-pressed' : 'win-btn'
+                orderType === 'limit' ? 'win-btn-pressed bg-win-pressed font-extrabold text-titlebar-navy' : 'win-btn'
               }`}
             >
               [ Limit ]
             </button>
           </div>
 
+          {/* Dynamic Limit Price Input (Shown only when Limit order is selected) */}
+          {orderType === 'limit' && (
+            <div className="flex flex-col gap-1 text-[10px] win-inset bg-surface-low p-1.5 border border-titlebar-navy">
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-titlebar-navy">Limit Order Price:</span>
+                <button
+                  type="button"
+                  onClick={() => setLimitPriceInput(currentPrice.toFixed(2))}
+                  className="win-btn px-1 text-[8px] font-bold"
+                >
+                  Use Mark
+                </button>
+              </div>
+              <div className="win-inset-deep bg-white flex items-center px-1.5 py-0.5">
+                <input
+                  type="number"
+                  step="any"
+                  value={limitPriceInput}
+                  onChange={(e) => {
+                    setLimitPriceInput(e.target.value);
+                    setOrderError(null);
+                  }}
+                  placeholder={currentPrice.toFixed(2)}
+                  className="w-full bg-transparent font-mono text-[13px] font-bold text-black border-none outline-none p-0"
+                />
+                <span className="font-bold text-[#333] text-[10px]">USDT</span>
+              </div>
+            </div>
+          )}
+
           {/* Margin Mode Selector */}
           <div className="win-inset bg-surface-low p-1 flex items-center justify-between text-[10px]">
             <span className="font-bold text-bevel-dark">Margin Mode:</span>
             <div className="flex space-x-1">
               <button
-                onClick={() => setMarginMode('isolated')}
-                className={`px-1.5 py-0.5 font-bold ${
-                  marginMode === 'isolated' ? 'win-btn-pressed bg-win-pressed' : 'win-btn'
-                }`}
-              >
-                Isolated
-              </button>
-              <button
                 onClick={() => setMarginMode('cross')}
                 className={`px-1.5 py-0.5 font-bold ${
-                  marginMode === 'cross' ? 'win-btn-pressed bg-win-pressed' : 'win-btn'
+                  marginMode === 'cross' ? 'win-btn-pressed bg-win-pressed font-extrabold text-titlebar-navy' : 'win-btn'
                 }`}
               >
                 Cross
               </button>
+              <button
+                onClick={() => setMarginMode('isolated')}
+                className={`px-1.5 py-0.5 font-bold ${
+                  marginMode === 'isolated' ? 'win-btn-pressed bg-win-pressed font-extrabold text-titlebar-navy' : 'win-btn'
+                }`}
+              >
+                Isolated
+              </button>
             </div>
           </div>
 
-          {/* Leverage Stepper / Slider */}
-          <div className="win-inset bg-surface-low p-1.5 flex flex-col gap-1 text-[10px]">
+          {/* Leverage Stepper / Slider with Discrete Snap Points */}
+          <div className="win-inset bg-surface-low p-1.5 flex flex-col gap-1.5 text-[10px]">
             <div className="flex justify-between items-center font-bold">
               <span>Leverage:</span>
-              <span className="font-mono text-titlebar-navy text-[12px]">
+              <span className="font-mono text-titlebar-navy text-[12px] font-extrabold">
                 {leverage}x Multiplier
               </span>
             </div>
@@ -464,17 +573,27 @@ export const TurboTradeWindow: React.FC = () => {
               className="w-full h-3 cursor-ew-resize accent-titlebar-navy"
             />
 
-            <div className="flex justify-between text-[9px] font-mono text-[#333] font-semibold">
-              <span>1x</span>
-              <span>10x</span>
-              <span className="font-bold text-titlebar-navy">20x</span>
-              <span>50x</span>
-              <span>100x</span>
+            {/* Discrete Snap Buttons */}
+            <div className="grid grid-cols-6 gap-0.5">
+              {LEVERAGE_SNAPS.map((val) => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => setLeverage(val)}
+                  className={`py-0.5 text-[8.5px] font-bold ${
+                    leverage === val
+                      ? 'win-btn-pressed bg-win-pressed text-titlebar-navy font-extrabold'
+                      : 'win-btn bg-win-base text-black'
+                  }`}
+                >
+                  {val}x
+                </button>
+              ))}
             </div>
 
             {leverage >= 20 && (
-              <div className="bg-[#FFE5E5] text-crt-bearish text-[8px] font-bold p-1 border border-crt-bearish flex items-center gap-1">
-                <PixelIcon name="warning" size={10} />
+              <div className="bg-[#FFE5E5] text-crt-bearish text-[8.5px] font-bold p-1 border border-crt-bearish flex items-center gap-1">
+                <PixelIcon name="warning" size={12} className="flex-shrink-0" />
                 <span>Warning: {leverage}x High Liquidation Risk</span>
               </div>
             )}
@@ -525,28 +644,36 @@ export const TurboTradeWindow: React.FC = () => {
           </div>
 
           {/* Real-time Pre-trade Calculation Box */}
-          <div className="win-inset-deep bg-[#121212] p-2 font-mono text-[10px] text-white flex flex-col gap-1.5">
+          <div className="win-inset-deep bg-[#121212] p-2 font-mono text-[9.5px] text-white flex flex-col gap-1">
+            <div className="flex justify-between">
+              <span className="text-[#C0C0C0] font-semibold">Margin Cost:</span>
+              <span className="text-white font-bold">${marginAmount.toFixed(2)} USDT</span>
+            </div>
             <div className="flex justify-between">
               <span className="text-[#C0C0C0] font-semibold">Notional Value:</span>
-              <span className="text-white font-bold">${notional.toFixed(2)}</span>
+              <span className="text-white font-bold">${notional.toFixed(2)} USDT</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-[#C0C0C0] font-semibold">Est. Liq Price:</span>
-              <span className="text-crt-bearish font-bold">${estLiqLong.toFixed(2)}</span>
+              <span className="text-[#C0C0C0] font-semibold">Max Position:</span>
+              <span className="text-crt-bullish font-bold">${maxPositionSize.toFixed(2)} USDT</span>
+            </div>
+            <div className="flex justify-between border-t border-[#333] pt-1">
+              <span className="text-[#C0C0C0] font-semibold">Est. Liq (Long):</span>
+              <span className="text-crt-bullish font-bold">${estLiqLong.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
+              <span className="text-[#C0C0C0] font-semibold">Est. Liq (Short):</span>
+              <span className="text-crt-bearish font-bold">${estLiqShort.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between border-t border-[#333] pt-1">
               <span className="text-[#C0C0C0] font-semibold">Taker Fee (0.05%):</span>
               <span className="text-white font-bold">${fee.toFixed(4)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-[#C0C0C0] font-semibold">Slippage Tolerance:</span>
-              <span className="text-crt-bullish font-bold">0.05%</span>
             </div>
           </div>
 
           {/* Order Error Notification */}
           {orderError && (
-            <div className="bg-[#FFE5E5] text-crt-bearish text-[8px] font-bold p-1 border border-crt-bearish">
+            <div className="bg-[#FFE5E5] text-crt-bearish text-[8.5px] font-bold p-1 border border-crt-bearish">
               ⚠ {orderError}
             </div>
           )}
@@ -561,6 +688,11 @@ export const TurboTradeWindow: React.FC = () => {
                   setOrderError('Enter valid margin amount');
                   return;
                 }
+                const parsedLimit = orderType === 'limit' ? parseFloat(limitPriceInput) : undefined;
+                if (orderType === 'limit' && (!parsedLimit || parsedLimit <= 0)) {
+                  setOrderError('Enter valid limit price');
+                  return;
+                }
                 const res = openPosition(
                   {
                     pair: selectedPair,
@@ -569,8 +701,9 @@ export const TurboTradeWindow: React.FC = () => {
                     leverage,
                     margin,
                     type: orderType.toUpperCase() as 'MARKET' | 'LIMIT',
+                    limitPrice: parsedLimit,
                   },
-                  currentPrice
+                  orderType === 'limit' ? parsedLimit : currentPrice
                 );
                 if (!res.success) {
                   setOrderError(res.error || 'Order failed');
@@ -590,6 +723,11 @@ export const TurboTradeWindow: React.FC = () => {
                   setOrderError('Enter valid margin amount');
                   return;
                 }
+                const parsedLimit = orderType === 'limit' ? parseFloat(limitPriceInput) : undefined;
+                if (orderType === 'limit' && (!parsedLimit || parsedLimit <= 0)) {
+                  setOrderError('Enter valid limit price');
+                  return;
+                }
                 const res = openPosition(
                   {
                     pair: selectedPair,
@@ -598,8 +736,9 @@ export const TurboTradeWindow: React.FC = () => {
                     leverage,
                     margin,
                     type: orderType.toUpperCase() as 'MARKET' | 'LIMIT',
+                    limitPrice: parsedLimit,
                   },
-                  currentPrice
+                  orderType === 'limit' ? parsedLimit : currentPrice
                 );
                 if (!res.success) {
                   setOrderError(res.error || 'Order failed');

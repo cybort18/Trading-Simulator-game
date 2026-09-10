@@ -101,4 +101,26 @@ describe('useWalletStore', () => {
     expect(useWalletStore.getState().equity).toBe(10.50);
     expect(useWalletStore.getState().isFaucetAvailable()).toBe(false);
   });
+
+  it('claims daily reward, credits wallet, and enforces 24h cooldown', () => {
+    const initialEquity = useWalletStore.getState().equity;
+    expect(useWalletStore.getState().currentStreakDay).toBe(1);
+
+    // First claim for Day 1 (+2.00 USDT)
+    const result = useWalletStore.getState().claimDailyReward();
+    expect(result.success).toBe(true);
+    expect(result.amount).toBe(2.00);
+
+    const updated = useWalletStore.getState();
+    expect(updated.equity).toBe(initialEquity + 2.00);
+    expect(updated.availableMargin).toBe(initialEquity + 2.00);
+    expect(updated.currentStreakDay).toBe(2);
+    expect(updated.lastClaimTimestamp).toBeGreaterThan(0);
+
+    // Immediate second claim should be rejected on cooldown
+    const secondClaim = useWalletStore.getState().claimDailyReward();
+    expect(secondClaim.success).toBe(false);
+    expect(secondClaim.error).toContain('cooldown');
+    expect(useWalletStore.getState().getTimeUntilNextDailyClaim()).toBeGreaterThan(0);
+  });
 });

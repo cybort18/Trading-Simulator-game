@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useWindowStore } from '@/stores/useWindowStore';
 import { PixelIcon } from '@/components/common/PixelIcon';
+import { safeStateStorage } from '@/utils/safeStorage';
 
 export const WelcomeModal: React.FC = () => {
   const windowState = useWindowStore((state) => state.windows.welcome);
@@ -16,7 +17,7 @@ export const WelcomeModal: React.FC = () => {
 
   const handleStartTrading = () => {
     if (dontShowAgain) {
-      localStorage.setItem('CRYPTOOS_98_HIDE_WELCOME', 'true');
+      safeStateStorage.setItem('CRYPTOOS_98_HIDE_WELCOME', 'true');
     }
     closeWindow('welcome');
     openWindow('turbotrade');

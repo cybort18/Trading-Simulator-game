@@ -1,35 +1,110 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { WindowFrame } from '@/components/desktop/WindowFrame';
 import { PixelIcon } from '@/components/common/PixelIcon';
-import { useWalletStore } from '@/stores/useWalletStore';
+import { useWalletStore, DAILY_REWARD_TIERS } from '@/stores/useWalletStore';
 import confetti from 'canvas-confetti';
 
-export const DegenVaultWindow: React.FC = () => {
-  const [day2Claimed, setDay2Claimed] = useState(false);
+function getRankAndXp(totalTrades: number, realizedPnl: number, winRate: number) {
+  const xp = totalTrades * 120 + Math.max(0, Math.floor(realizedPnl * 10)) + Math.floor(winRate * 5);
 
+  if (xp >= 5000 || totalTrades >= 25) {
+    return {
+      rank: 'Legendary Whale',
+      currentXp: Math.min(10000, xp),
+      targetXp: 10000,
+      progressPct: Math.min(100, Math.round((xp / 10000) * 100)),
+      nextRank: 'MAX RANK (APEX WHALE)',
+      badgeClass: 'bg-[#FFD700] text-black win-outset font-black',
+    };
+  } else if (xp >= 2500 || totalTrades >= 12) {
+    return {
+      rank: 'Veteran Scalper',
+      currentXp: xp,
+      targetXp: 5000,
+      progressPct: Math.min(100, Math.max(10, Math.round(((xp - 2500) / 2500) * 100))),
+      nextRank: 'Legendary Whale',
+      badgeClass: 'bg-[#9370DB] text-white win-outset font-bold',
+    };
+  } else if (xp >= 1000 || totalTrades >= 4) {
+    return {
+      rank: 'Degenerate Trader',
+      currentXp: xp,
+      targetXp: 2500,
+      progressPct: Math.min(100, Math.max(10, Math.round(((xp - 1000) / 1500) * 100))),
+      nextRank: 'Veteran Scalper',
+      badgeClass: 'bg-titlebar-navy text-white win-outset font-bold',
+    };
+  } else {
+    return {
+      rank: 'Novice Liquidator',
+      currentXp: xp,
+      targetXp: 1000,
+      progressPct: Math.min(100, Math.max(8, Math.round((xp / 1000) * 100))),
+      nextRank: 'Degenerate Trader',
+      badgeClass: 'bg-crt-amber text-black win-outset font-bold',
+    };
+  }
+}
+
+function formatCountdown(ms: number): string {
+  const totalSecs = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(totalSecs / 3600);
+  const m = Math.floor((totalSecs % 3600) / 60);
+  const s = totalSecs % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+export const DegenVaultWindow: React.FC = () => {
   const equity = useWalletStore((state) => state.equity);
   const availMargin = useWalletStore((state) => state.availableMargin);
   const lockedMargin = useWalletStore((state) => state.lockedMargin);
   const winCount = useWalletStore((state) => state.winCount);
   const totalTrades = useWalletStore((state) => state.totalTrades);
+  const realizedPnl = useWalletStore((state) => state.realizedPnl);
   const winRate = useWalletStore((state) => state.getWinRate());
   const allTimeRoi = useWalletStore((state) => state.getAllTimeRoi());
   const isFaucetAvailable = useWalletStore((state) => state.isFaucetAvailable());
   const claimFaucet = useWalletStore((state) => state.claimFaucet);
   const resetWallet = useWalletStore((state) => state.resetWallet);
+  const currentStreakDay = useWalletStore((state) => state.currentStreakDay || 1);
+  const claimDailyReward = useWalletStore((state) => state.claimDailyReward);
+  const getTimeUntilNextDailyClaim = useWalletStore((state) => state.getTimeUntilNextDailyClaim);
+
+  const [remainingMs, setRemainingMs] = useState<number>(0);
+  const [claimFeedback, setClaimFeedback] = useState<string | null>(null);
+
+  useEffect(() => {
+    const updateCountdown = () => {
+      setRemainingMs(getTimeUntilNextDailyClaim());
+    };
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [getTimeUntilNextDailyClaim]);
+
+  const profileRank = getRankAndXp(totalTrades, realizedPnl, winRate);
+  const activeDayTier = DAILY_REWARD_TIERS[currentStreakDay - 1] || DAILY_REWARD_TIERS[0];
+  const canClaim = remainingMs === 0;
 
   const handleClaim = () => {
-    if (day2Claimed) return;
-    setDay2Claimed(true);
-    useWalletStore.getState().recordTradeResult(5.0, 0);
-    confetti({
-      particleCount: 80,
-      spread: 70,
-      origin: { y: 0.6 },
-    });
+    if (!canClaim) return;
+    const res = claimDailyReward();
+    if (res.success) {
+      setClaimFeedback(`Claimed +${res.amount?.toFixed(2)} USDT!`);
+      confetti({
+        particleCount: 90,
+        spread: 75,
+        origin: { y: 0.6 },
+      });
+      setTimeout(() => setClaimFeedback(null), 3000);
+    } else if (res.error) {
+      setClaimFeedback(res.error);
+      setTimeout(() => setClaimFeedback(null), 3000);
+    }
   };
 
   const handleFaucet = () => {
+    if (!isFaucetAvailable) return;
     claimFaucet(10.0);
     confetti({
       particleCount: 50,
@@ -55,13 +130,13 @@ export const DegenVaultWindow: React.FC = () => {
     >
       <div className="flex flex-col gap-2 p-1 text-black font-ui overflow-y-auto">
         {/* =================================================================== */}
-        {/* SECTION 1: TRADER PROFILE                                           */}
+        {/* SECTION 1: TRADER PROFILE & AVATAR RANK                             */}
         {/* =================================================================== */}
         <div className="win-outset bg-surface-high p-2 flex items-center justify-between gap-3">
           <div className="flex items-center space-x-3">
             {/* Retro Pixel Avatar */}
             <div className="w-12 h-12 win-inset-deep p-0.5 flex items-center justify-center flex-shrink-0">
-              <div className="w-full h-full bg-[#1e293b] flex flex-col items-center justify-center">
+              <div className="w-full h-full bg-[#1e293b] flex flex-col items-center justify-center border border-titlebar-navy">
                 <span className="text-[26px]">😎</span>
               </div>
             </div>
@@ -85,19 +160,23 @@ export const DegenVaultWindow: React.FC = () => {
           </div>
 
           {/* Rank Badge & XP Track */}
-          <div className="flex flex-col items-end min-w-[200px]">
+          <div className="flex flex-col items-end min-w-[210px]">
             <div className="flex items-center space-x-1.5 mb-0.5">
               <span className="text-[10px] text-bevel-shadow font-bold">RANK:</span>
-              <span className="bg-crt-amber text-black px-1.5 py-0.5 font-bold text-[10px] win-outset uppercase">
-                Novice Liquidator
+              <span className={`px-1.5 py-0.5 text-[10px] uppercase ${profileRank.badgeClass}`}>
+                {profileRank.rank}
               </span>
             </div>
             <div className="w-full text-right font-mono text-[9px] text-bevel-shadow mb-0.5">
-              XP: 3,450 / 5,000 → <span className="text-titlebar-navy font-bold">Degenerate Trader</span>
+              XP: {profileRank.currentXp} / {profileRank.targetXp} →{' '}
+              <span className="text-titlebar-navy font-bold">{profileRank.nextRank}</span>
             </div>
             {/* Progress Track */}
             <div className="w-full h-3 win-inset bg-white p-0.5 flex">
-              <div className="h-full bg-titlebar-navy" style={{ width: '69%' }}></div>
+              <div
+                className="h-full bg-titlebar-navy transition-all duration-300"
+                style={{ width: `${profileRank.progressPct}%` }}
+              ></div>
             </div>
           </div>
         </div>
@@ -119,7 +198,7 @@ export const DegenVaultWindow: React.FC = () => {
           {/* Top 3 Metrics Cards */}
           <div className="grid grid-cols-3 gap-2 py-0.5">
             <div className="win-inset bg-[#181818] p-2 border border-[#262626]">
-              <span className="block font-mono text-[10px] font-semibold text-[#D0D0D0]">TOTAL EQUITY</span>
+              <span className="block font-mono text-[10px] font-semibold text-[#D0D0D0]">TOTAL NET WORTH / EQUITY</span>
               <span className="font-mono text-[18px] font-bold text-crt-bullish">
                 ${equity.toFixed(2)}
               </span>
@@ -166,8 +245,12 @@ export const DegenVaultWindow: React.FC = () => {
             <div className="flex items-center space-x-2">
               <button
                 onClick={handleFaucet}
+                disabled={!isFaucetAvailable}
+                title={isFaucetAvailable ? 'Emergency Faucet Ready (+10 USDT)' : 'Faucet only unlocks when balance drops below $1.00 USDT'}
                 className={`win-btn text-[10px] font-bold px-2 py-0.5 flex items-center gap-1 active:translate-x-0.5 active:translate-y-0.5 ${
-                  isFaucetAvailable ? 'bg-crt-amber text-black animate-pulse' : 'text-black'
+                  isFaucetAvailable
+                    ? 'bg-crt-amber text-black animate-pulse cursor-pointer'
+                    : 'text-[#888] cursor-not-allowed opacity-60'
                 }`}
               >
                 <span>💧</span>
@@ -177,7 +260,6 @@ export const DegenVaultWindow: React.FC = () => {
                 onClick={() => {
                   if (confirm('Reset wallet to default 10.00 USDT?')) {
                     resetWallet(10.0);
-                    setDay2Claimed(false);
                   }
                 }}
                 className="win-btn text-error text-[10px] font-bold px-2 py-0.5 flex items-center gap-1 active:translate-x-0.5 active:translate-y-0.5"
@@ -200,104 +282,95 @@ export const DegenVaultWindow: React.FC = () => {
               <span className="uppercase tracking-wide">7-Day Daily Login Reward Streak</span>
             </div>
             <span className="bg-titlebar-navy text-white text-[9px] font-bold px-1.5 py-0.5 win-outset">
-              STREAK: {day2Claimed ? '2 DAYS' : '1 DAY'}
+              STREAK: DAY {currentStreakDay} / 7
             </span>
           </div>
 
           {/* 7-Day Slot Grid */}
           <div className="grid grid-cols-7 gap-1">
-            {/* Day 1: Claimed */}
-            <div className="win-inset bg-surface-high p-1 flex flex-col items-center text-center opacity-85">
-              <span className="font-mono text-[8px] text-[#333] font-bold">DAY 1</span>
-              <PixelIcon name="check" size={16} className="text-crt-bullish my-0.5" />
-              <span className="font-mono font-bold text-[9px] text-[#006622]">+2 USDT</span>
-              <span className="font-mono text-[7px] text-[#006622] font-bold">Claimed ✓</span>
-            </div>
+            {DAILY_REWARD_TIERS.map((tier) => {
+              const isClaimed = tier.day < currentStreakDay;
+              const isCurrent = tier.day === currentStreakDay;
+              const isReady = isCurrent && canClaim;
 
-            {/* Day 2: Active or Claimed */}
-            <div
-              className={`p-1 flex flex-col items-center text-center relative ${
-                day2Claimed
-                  ? 'win-inset bg-surface-high opacity-85'
-                  : 'win-outset bg-[#FFFDE6] border-2 border-crt-amber shadow-md animate-pulse'
-              }`}
-            >
-              <span className="font-mono text-[8px] text-titlebar-navy font-bold">DAY 2</span>
-              <PixelIcon
-                name={day2Claimed ? 'check' : 'gift'}
-                size={16}
-                className={day2Claimed ? 'text-crt-bullish my-0.5' : 'text-crt-amber my-0.5'}
-              />
-              <span className="font-mono font-bold text-[10px] text-black">+5 USDT</span>
-              <span
-                className={`font-mono text-[7px] font-bold px-1 ${
-                  day2Claimed ? 'text-[#006622]' : 'bg-crt-amber text-black'
-                }`}
-              >
-                {day2Claimed ? 'Claimed ✓' : 'READY!'}
-              </span>
-            </div>
+              if (isClaimed) {
+                return (
+                  <div key={tier.day} className="win-inset bg-surface-high p-1 flex flex-col items-center text-center opacity-85">
+                    <span className="font-mono text-[8px] text-[#333] font-bold">DAY {tier.day}</span>
+                    <PixelIcon name="check" size={16} className="text-crt-bullish my-0.5" />
+                    <span className="font-mono font-bold text-[9px] text-[#006622]">{tier.label.split(' ')[0]} {tier.label.split(' ')[1]}</span>
+                    <span className="font-mono text-[7px] text-[#006622] font-bold">Claimed ✓</span>
+                  </div>
+                );
+              }
 
-            {/* Day 3: Locked */}
-            <div className="win-inset bg-surface-high p-1 flex flex-col items-center text-center text-[#404040]">
-              <span className="font-mono text-[8px] font-bold">DAY 3</span>
-              <PixelIcon name="lock" size={16} className="text-[#555] my-0.5" />
-              <span className="font-mono font-bold text-[9px] text-black">+8 USDT</span>
-              <span className="font-mono text-[7px] text-[#666] font-semibold">Locked</span>
-            </div>
+              if (isCurrent) {
+                return (
+                  <div
+                    key={tier.day}
+                    className={`p-1 flex flex-col items-center text-center relative ${
+                      isReady
+                        ? 'win-outset bg-[#FFFDE6] border-2 border-crt-amber shadow-md animate-pulse'
+                        : 'win-inset bg-surface-high opacity-90'
+                    }`}
+                  >
+                    <span className="font-mono text-[8px] text-titlebar-navy font-bold">DAY {tier.day}</span>
+                    <PixelIcon
+                      name="gift"
+                      size={16}
+                      className={isReady ? 'text-crt-amber my-0.5 animate-bounce' : 'text-titlebar-navy my-0.5'}
+                    />
+                    <span className="font-mono font-bold text-[10px] text-black">{tier.label.split(' ')[0]} {tier.label.split(' ')[1]}</span>
+                    <span
+                      className={`font-mono text-[7px] font-bold px-1 ${
+                        isReady ? 'bg-crt-amber text-black' : 'bg-surface-low text-[#444]'
+                      }`}
+                    >
+                      {isReady ? 'READY!' : formatCountdown(remainingMs)}
+                    </span>
+                  </div>
+                );
+              }
 
-            {/* Day 4: Locked */}
-            <div className="win-inset bg-surface-high p-1 flex flex-col items-center text-center text-[#404040]">
-              <span className="font-mono text-[8px] font-bold">DAY 4</span>
-              <PixelIcon name="lock" size={16} className="text-[#555] my-0.5" />
-              <span className="font-mono font-bold text-[9px] text-black">+10 USDT</span>
-              <span className="font-mono text-[7px] text-[#666] font-semibold">Locked</span>
-            </div>
-
-            {/* Day 5: Locked */}
-            <div className="win-inset bg-surface-high p-1 flex flex-col items-center text-center text-[#404040]">
-              <span className="font-mono text-[8px] font-bold">DAY 5</span>
-              <PixelIcon name="lock" size={16} className="text-[#555] my-0.5" />
-              <span className="font-mono font-bold text-[9px] text-black">+15 USDT</span>
-              <span className="font-mono text-[7px] text-[#666] font-semibold">Locked</span>
-            </div>
-
-            {/* Day 6: Locked */}
-            <div className="win-inset bg-surface-high p-1 flex flex-col items-center text-center text-[#404040]">
-              <span className="font-mono text-[8px] font-bold">DAY 6</span>
-              <PixelIcon name="lock" size={16} className="text-[#555] my-0.5" />
-              <span className="font-mono font-bold text-[9px] text-black">+25 USDT</span>
-              <span className="font-mono text-[7px] text-[#666] font-semibold">Locked</span>
-            </div>
-
-            {/* Day 7: Locked + Mystery Box */}
-            <div className="win-inset bg-surface-high p-1 flex flex-col items-center text-center text-[#404040]">
-              <span className="font-mono text-[8px] text-titlebar-navy font-bold">DAY 7</span>
-              <PixelIcon name="gift" size={16} className="text-titlebar-navy my-0.5" />
-              <span className="font-mono font-bold text-[8px] text-black">+50 USDT</span>
-              <span className="font-mono text-[7px] text-titlebar-navy font-bold">+MYSTERY</span>
-            </div>
+              return (
+                <div key={tier.day} className="win-inset bg-surface-high p-1 flex flex-col items-center text-center text-[#404040]">
+                  <span className="font-mono text-[8px] font-bold">DAY {tier.day}</span>
+                  <PixelIcon name="lock" size={16} className="text-[#555] my-0.5" />
+                  <span className="font-mono font-bold text-[9px] text-black">{tier.label.split(' ')[0]} {tier.label.split(' ')[1]}</span>
+                  <span className="font-mono text-[7px] text-[#666] font-semibold">
+                    {tier.day === 7 ? '+MYSTERY' : 'Locked'}
+                  </span>
+                </div>
+              );
+            })}
           </div>
+
+          {/* Feedback banner */}
+          {claimFeedback && (
+            <div className="bg-[#E6FFE6] border border-[#008531] text-[#006622] text-[10px] font-bold px-2 py-1 text-center font-mono">
+              ✓ {claimFeedback}
+            </div>
+          )}
 
           {/* Prominent Claim Button */}
           <div className="pt-1">
             <button
               onClick={handleClaim}
-              disabled={day2Claimed}
+              disabled={!canClaim}
               className={`w-full py-2 px-3 flex items-center justify-center space-x-2 ${
-                day2Claimed
+                !canClaim
                   ? 'win-inset bg-win-base text-bevel-shadow cursor-not-allowed'
                   : 'win-btn bg-[#008531] hover:bg-[#009938] text-white active:translate-x-0.5 active:translate-y-0.5 shadow-md'
               }`}
             >
               <div className="border border-dotted border-white w-full py-0.5 flex items-center justify-center space-x-2">
-                <PixelIcon name="sparkles" size={14} className="text-crt-bullish animate-bounce" />
+                <PixelIcon name="sparkles" size={14} className={canClaim ? 'text-crt-bullish animate-bounce' : 'text-[#888]'} />
                 <span className="font-headline font-bold text-[12px] uppercase tracking-wider">
-                  {day2Claimed
-                    ? 'TODAY’S REWARD CLAIMED (NEXT UNLOCK IN 23:45)'
-                    : '[ CLAIM DAILY REWARD: +5.00 USDT ]'}
+                  {canClaim
+                    ? `[ CLAIM DAY ${currentStreakDay} REWARD: +${activeDayTier.reward.toFixed(2)} USDT ]`
+                    : `TODAY'S REWARD CLAIMED (NEXT UNLOCK IN ${formatCountdown(remainingMs)})`}
                 </span>
-                <PixelIcon name="sparkles" size={14} className="text-crt-bullish animate-bounce" />
+                <PixelIcon name="sparkles" size={14} className={canClaim ? 'text-crt-bullish animate-bounce' : 'text-[#888]'} />
               </div>
             </button>
           </div>

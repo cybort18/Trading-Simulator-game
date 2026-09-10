@@ -92,7 +92,7 @@ This roadmap outlines the complete sequence of engineering deliverables required
 
 ## Phase 4: Window Applications & Interactive Modals
 
-- [ ] **4.1 Build `TurboTrade.exe` Complete Window**
+- [x] **4.1 Build `TurboTrade.exe` Complete Window**
   - Deliverable: Full 3-panel futures trading terminal (Left: Market & 24h Metrics, Center: Chart & Open Positions Table, Right: Order Entry Form & Leverage Slider).
   - Acceptance Criteria:
     - Leverage slider snaps between discrete values (`1x, 5x, 10x, 20x, 50x, 100x`) with warning banner at $\ge 20\text{x}$.
@@ -100,25 +100,25 @@ This roadmap outlines the complete sequence of engineering deliverables required
     - Pre-trade calculation box displays Margin Cost, Est. Liq Price, and Max Position size.
     - Open Positions table displays Pair, Type, Entry, Mark, Liq Price, Margin, ROE %, and a working `Close Position` button.
 
-- [ ] **4.2 Build `DegenVault.exe` Profile & Wallet Window**
+- [x] **4.2 Build `DegenVault.exe` Profile & Wallet Window**
   - Deliverable: Retro wallet window containing:
     - Section 1: User Profile (pixel avatar, handle `SatoshiDegen_98`, rank badge `Novice Liquidator`, XP progression bar).
     - Section 2: Virtual Ledger (Total Equity, Available Margin, Margin in Position, All-time ROI %, Win Rate, Faucet button).
     - Section 3: 7-Day Daily Claim Streak Tracker.
   - Acceptance Criteria: Balance values update reactively upon position open/close/liquidation; Faucet button (+10 USDT) enables only when equity drops below 1.00 USDT.
 
-- [ ] **4.3 Build `Leaderboard.exe` Global Ranking Window**
+- [x] **4.3 Build `Leaderboard.exe` Global Ranking Window**
   - Deliverable: Competitive rankings terminal displaying:
     - Podium showcase for Top 3 traders (Gold, Silver, Bronze cards with retro badges).
     - Sortable spreadsheet data grid with raised bevel column headers (Rank, Handle, Tier, Win Rate, 7D ROI %, Net PnL).
     - Sticky bottom row highlighting the user's current rank (`YOU`).
   - Acceptance Criteria: Filter tabs switch between `All-Time ROI`, `24H Gainers`, `Weekly Cup`, and `Most Liquidated (Hall of Shame)`.
 
-- [ ] **4.4 Build `WelcomeModal` System Onboarding Dialog**
+- [x] **4.4 Build `WelcomeModal` System Onboarding Dialog**
   - Deliverable: Centered 90s system notice dialog popping on first visit.
   - Acceptance Criteria: Details 10.00 USDT starter pack and 3 quick rules; includes `[x] Do not show on startup` checkbox; clicking `[ START TRADING ]` closes modal and focuses `TurboTrade.exe`.
 
-- [ ] **4.5 Build `ShareFlexCard` Social PnL Export Modal**
+- [x] **4.5 Build `ShareFlexCard` Social PnL Export Modal**
   - Deliverable: High-resolution retro card rendering modal with customizable theme selector (`Cyber CRT Green`, `CRT Bearish Red`, `Gold Whale`).
   - Acceptance Criteria:
     - Captures trade metrics (Pair, Direction, Leverage, ROE %, Net Gain in USDT, Entry vs Mark price).
@@ -126,7 +126,7 @@ This roadmap outlines the complete sequence of engineering deliverables required
     - `[ Save .PNG 💾 ]` triggers file download.
     - `[ 𝕏 Share on X ↗ ]` opens pre-populated tweet draft with hashtags.
 
-- [ ] **4.6 Build Liquidation Crash Alert Dialog (`LiquidationModal.tsx`)**
+- [x] **4.6 Build Liquidation Crash Alert Dialog (`LiquidationModal.tsx`)**
   - Deliverable: Emergency modal spawning upon forced liquidation with CRT screen shake animation.
   - Acceptance Criteria: Displays skull icon `☠`, loss amount, liquidated contract details, and quick restart options.
 
