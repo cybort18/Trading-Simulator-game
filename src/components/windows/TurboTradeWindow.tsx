@@ -329,7 +329,7 @@ export const TurboTradeWindow: React.FC = () => {
             {/* Positions Table */}
             {bottomTab === 'positions' ? (
               positions.length === 0 ? (
-                <div className="flex-1 p-4 font-mono text-[11px] text-[#888] font-bold flex items-center justify-center">
+                <div className="flex-1 p-4 font-mono text-[11px] text-[#222] font-bold flex items-center justify-center">
                   NO ACTIVE OPEN POSITIONS. SELECT CONTRACT &amp; EXECUTE AN ORDER ON RIGHT PANEL.
                 </div>
               ) : (
@@ -407,7 +407,7 @@ export const TurboTradeWindow: React.FC = () => {
               )
             ) : (
               tradeHistory.length === 0 ? (
-                <div className="flex-1 p-4 font-mono text-[11px] text-[#888] font-bold flex items-center justify-center">
+                <div className="flex-1 p-4 font-mono text-[11px] text-[#222] font-bold flex items-center justify-center">
                   NO PAST ORDERS RECORDED IN THIS SESSION.
                 </div>
               ) : (

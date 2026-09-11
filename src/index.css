@@ -19,92 +19,94 @@
   }
 }
 
-/* ========================================================================= */
-/* 1. OUTSET (Raised 3D Surface - Buttons, Windows, Unpressed Tabs)          */
-/* ========================================================================= */
-.win-outset, .bevel-outset {
-  border-top: 2px solid #FFFFFF;
-  border-left: 2px solid #FFFFFF;
-  border-right: 2px solid #808080;
-  border-bottom: 2px solid #808080;
-  box-shadow: 1px 1px 0px 0px #000000;
-  background-color: #C0C0C0;
-}
+@layer components {
+  /* ========================================================================= */
+  /* 1. OUTSET (Raised 3D Surface - Buttons, Windows, Unpressed Tabs)          */
+  /* ========================================================================= */
+  .win-outset, .bevel-outset {
+    border-top: 2px solid #FFFFFF;
+    border-left: 2px solid #FFFFFF;
+    border-right: 2px solid #808080;
+    border-bottom: 2px solid #808080;
+    box-shadow: 1px 1px 0px 0px #000000;
+    background-color: #C0C0C0;
+  }
 
-/* ========================================================================= */
-/* 2. INSET (Sunken 3D Surface - Inputs, System Tray, Status Recesses)       */
-/* ========================================================================= */
-.win-inset, .bevel-inset {
-  border-top: 2px solid #808080;
-  border-left: 2px solid #808080;
-  border-right: 2px solid #FFFFFF;
-  border-bottom: 2px solid #FFFFFF;
-  box-shadow: inset 1px 1px 0px 0px #000000;
-  background-color: #C0C0C0;
-}
+  /* ========================================================================= */
+  /* 2. INSET (Sunken 3D Surface - Inputs, System Tray, Status Recesses)       */
+  /* ========================================================================= */
+  .win-inset, .bevel-inset {
+    border-top: 2px solid #808080;
+    border-left: 2px solid #808080;
+    border-right: 2px solid #FFFFFF;
+    border-bottom: 2px solid #FFFFFF;
+    box-shadow: inset 1px 1px 0px 0px #000000;
+    background-color: #C0C0C0;
+  }
 
-/* ========================================================================= */
-/* 3. INSET DEEP (Terminal Canvas, Chart Cavities, Data Wells)               */
-/* ========================================================================= */
-.win-inset-deep, .bevel-inset-deep {
-  border-top: 2px solid #000000;
-  border-left: 2px solid #000000;
-  border-right: 1px solid #FFFFFF;
-  border-bottom: 1px solid #FFFFFF;
-  background-color: #121212;
-}
+  /* ========================================================================= */
+  /* 3. INSET DEEP (Terminal Canvas, Chart Cavities, Data Wells)               */
+  /* ========================================================================= */
+  .win-inset-deep, .bevel-inset-deep {
+    border-top: 2px solid #000000;
+    border-left: 2px solid #000000;
+    border-right: 1px solid #FFFFFF;
+    border-bottom: 1px solid #FFFFFF;
+    background-color: #121212;
+  }
 
-/* ========================================================================= */
-/* 4. BUTTON BEVELS (Interactive Tactile Feedback)                           */
-/* ========================================================================= */
-.win-btn, .bevel-btn {
-  border-top: 2px solid #FFFFFF;
-  border-left: 2px solid #FFFFFF;
-  border-right: 2px solid #808080;
-  border-bottom: 2px solid #808080;
-  box-shadow: 1px 1px 0px 0px #000000;
-  background-color: #C0C0C0;
-  user-select: none;
-  cursor: pointer;
-  transition: none;
-}
+  /* ========================================================================= */
+  /* 4. BUTTON BEVELS (Interactive Tactile Feedback)                           */
+  /* ========================================================================= */
+  .win-btn, .bevel-btn {
+    border-top: 2px solid #FFFFFF;
+    border-left: 2px solid #FFFFFF;
+    border-right: 2px solid #808080;
+    border-bottom: 2px solid #808080;
+    box-shadow: 1px 1px 0px 0px #000000;
+    background-color: #C0C0C0;
+    user-select: none;
+    cursor: pointer;
+    transition: none;
+  }
 
-.win-btn:active, .win-btn-pressed, .bevel-btn:active, .bevel-btn-pressed {
-  border-top: 2px solid #000000 !important;
-  border-left: 2px solid #000000 !important;
-  border-right: 2px solid #FFFFFF !important;
-  border-bottom: 2px solid #FFFFFF !important;
-  box-shadow: inset 1px 1px 0px 0px #808080 !important;
-  background-color: #B4B4B4 !important;
-  transform: translate(1px, 1px);
-}
+  .win-btn:active, .win-btn-pressed, .bevel-btn:active, .bevel-btn-pressed {
+    border-top: 2px solid #000000 !important;
+    border-left: 2px solid #000000 !important;
+    border-right: 2px solid #FFFFFF !important;
+    border-bottom: 2px solid #FFFFFF !important;
+    box-shadow: inset 1px 1px 0px 0px #808080 !important;
+    background-color: #B4B4B4;
+    transform: translate(1px, 1px);
+  }
 
-.win-btn-focus {
-  outline: 1px dotted #000000;
-  outline-offset: -3px;
-}
+  .win-btn-focus {
+    outline: 1px dotted #000000;
+    outline-offset: -3px;
+  }
 
-/* Window Outer Bevel Framing */
-.window-outer-frame {
-  border-top: 2px solid #FFFFFF;
-  border-left: 2px solid #FFFFFF;
-  border-right: 2px solid #000000;
-  border-bottom: 2px solid #000000;
-  outline: 1px solid #808080;
-  background-color: #C0C0C0;
-}
+  /* Window Outer Bevel Framing */
+  .window-outer-frame {
+    border-top: 2px solid #FFFFFF;
+    border-left: 2px solid #FFFFFF;
+    border-right: 2px solid #000000;
+    border-bottom: 2px solid #000000;
+    outline: 1px solid #808080;
+    background-color: #C0C0C0;
+  }
 
-/* ========================================================================= */
-/* 5. TITLEBAR GRADIENTS                                                     */
-/* ========================================================================= */
-.titlebar-active {
-  background: linear-gradient(90deg, #000080 0%, #1084D0 100%);
-  color: #FFFFFF;
-}
+  /* ========================================================================= */
+  /* 5. TITLEBAR GRADIENTS                                                     */
+  /* ========================================================================= */
+  .titlebar-active {
+    background: linear-gradient(90deg, #000080 0%, #1084D0 100%);
+    color: #FFFFFF;
+  }
 
-.titlebar-inactive {
-  background: linear-gradient(90deg, #708090 0%, #808080 100%);
-  color: #C0C0C0;
+  .titlebar-inactive {
+    background: linear-gradient(90deg, #708090 0%, #808080 100%);
+    color: #C0C0C0;
+  }
 }
 
 /* ========================================================================= */

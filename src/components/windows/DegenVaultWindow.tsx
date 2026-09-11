@@ -199,7 +199,7 @@ export const DegenVaultWindow: React.FC = () => {
 
           {/* Top 3 Metrics Cards */}
           <div className="grid grid-cols-3 gap-2 py-0.5">
-            <div className="win-inset bg-[#181818] p-2 border border-[#262626]">
+            <div className="win-inset-deep bg-[#181818] p-2 border border-[#333]">
               <span className="block font-mono text-[10px] font-semibold text-[#D0D0D0]">TOTAL NET WORTH / EQUITY</span>
               <span className="font-mono text-[18px] font-bold text-crt-bullish">
                 ${equity.toFixed(2)}
@@ -207,15 +207,15 @@ export const DegenVaultWindow: React.FC = () => {
               <span className="block font-mono text-[9px] text-crt-bullish font-semibold">USDT Reserve</span>
             </div>
 
-            <div className="win-inset bg-[#181818] p-2 border border-[#262626]">
+            <div className="win-inset-deep bg-[#181818] p-2 border border-[#333]">
               <span className="block font-mono text-[10px] font-semibold text-[#D0D0D0]">AVAILABLE MARGIN</span>
               <span className="font-mono text-[18px] font-bold text-white">
                 ${availMargin.toFixed(2)}
               </span>
-              <span className="block font-mono text-[9px] text-[#C0C0C0]">Free for orders</span>
+              <span className="block font-mono text-[9px] text-[#D0D0D0]">Free for orders</span>
             </div>
 
-            <div className="win-inset bg-[#181818] p-2 border border-[#262626]">
+            <div className="win-inset-deep bg-[#181818] p-2 border border-[#333]">
               <span className="block font-mono text-[10px] font-semibold text-[#D0D0D0]">LOCKED MARGIN</span>
               <span className="font-mono text-[18px] font-bold text-crt-amber">
                 ${lockedMargin.toFixed(2)}
@@ -335,11 +335,11 @@ export const DegenVaultWindow: React.FC = () => {
               }
 
               return (
-                <div key={tier.day} className="win-inset bg-[#DFDFDF] p-1 flex flex-col items-center text-center text-[#404040]">
-                  <span className="font-mono text-[8px] font-bold text-[#333]">DAY {tier.day}</span>
-                  <PixelIcon name="lock" size={16} className="text-[#555] my-0.5" />
+                <div key={tier.day} className="win-inset bg-[#DFDFDF] p-1 flex flex-col items-center text-center text-[#222]">
+                  <span className="font-mono text-[8px] font-bold text-black">DAY {tier.day}</span>
+                  <PixelIcon name="lock" size={16} className="text-[#333] my-0.5" />
                   <span className="font-mono font-bold text-[9px] text-black">{tier.label.split(' ')[0]} {tier.label.split(' ')[1]}</span>
-                  <span className="font-mono text-[7px] text-[#555] font-semibold">
+                  <span className="font-mono text-[7px] text-[#444] font-bold">
                     {tier.day === 7 ? '+MYSTERY' : 'Locked'}
                   </span>
                 </div>
@@ -361,18 +361,20 @@ export const DegenVaultWindow: React.FC = () => {
               disabled={!canClaim}
               className={`w-full py-2 px-3 flex items-center justify-center space-x-2 ${
                 !canClaim
-                  ? 'win-inset bg-win-base text-[#666] font-bold cursor-not-allowed'
+                  ? 'win-inset bg-win-base text-[#555] font-bold cursor-not-allowed'
                   : 'win-btn bg-[#008531] hover:bg-[#009938] text-white active:translate-x-0.5 active:translate-y-0.5 shadow-md font-bold'
               }`}
             >
-              <div className="border border-dotted border-white/80 w-full py-1 flex items-center justify-center space-x-2">
-                <PixelIcon name="sparkles" size={14} className={canClaim ? 'text-crt-bullish animate-bounce' : 'text-[#888]'} />
+              <div className={`w-full py-1 flex items-center justify-center space-x-2 ${
+                canClaim ? 'border border-dotted border-white text-white' : 'border border-dotted border-[#888] text-[#555]'
+              }`}>
+                <PixelIcon name="sparkles" size={14} className={canClaim ? 'text-crt-bullish animate-bounce' : 'text-[#777]'} />
                 <span className="font-headline font-bold text-[12px] uppercase tracking-wider">
                   {canClaim
                     ? `[ CLAIM DAY ${currentStreakDay} REWARD: +${activeDayTier.reward.toFixed(2)} USDT ]`
                     : `TODAY'S REWARD CLAIMED (NEXT UNLOCK IN ${formatCountdown(remainingMs)})`}
                 </span>
-                <PixelIcon name="sparkles" size={14} className={canClaim ? 'text-crt-bullish animate-bounce' : 'text-[#888]'} />
+                <PixelIcon name="sparkles" size={14} className={canClaim ? 'text-crt-bullish animate-bounce' : 'text-[#777]'} />
               </div>
             </button>
           </div>
