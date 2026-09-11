@@ -38,13 +38,13 @@ export const WelcomeModal: React.FC = () => {
           <div className="flex items-center space-x-1 flex-shrink-0">
             <button
               onClick={() => alert('CryptoOS 98 Futures Trading Simulation Manual')}
-              className="w-[15px] h-[14px] win-btn text-bevel-dark text-[9px] font-bold flex items-center justify-center"
+              className="w-[16px] h-[14px] win-btn bg-win-base text-black text-[9px] font-bold flex items-center justify-center active:translate-x-0.5 active:translate-y-0.5"
             >
               ?
             </button>
             <button
               onClick={() => closeWindow('welcome')}
-              className="w-[15px] h-[14px] win-btn text-error text-[9px] font-extrabold flex items-center justify-center"
+              className="w-[16px] h-[14px] win-btn bg-win-base text-black hover:bg-[#BA1A1A] hover:text-white text-[9px] font-bold flex items-center justify-center active:translate-x-0.5 active:translate-y-0.5"
             >
               ✕
             </button>

@@ -223,36 +223,36 @@ export const Taskbar: React.FC = () => {
         <div className="win-inset px-2 py-0.5 bg-win-base flex items-center space-x-2.5 font-mono text-[10px] flex-shrink-0">
           {/* WS Live Indicator */}
           <div className="flex items-center space-x-1 font-bold">
-            <span className="text-bevel-dark">WS</span>
+            <span className="text-black font-bold">WS:</span>
             {connectionStatus === 'CONNECTED' ? (
               <>
-                <span className="w-2 h-2 rounded-full bg-crt-bullish animate-pulse"></span>
-                <span className="text-[#008531]">LIVE</span>
-                <span className="text-[9px] text-[#555]">[{pingLatency}ms]</span>
+                <span className="w-2 h-2 bg-crt-bullish border border-[#004411] animate-pulse"></span>
+                <span className="text-[#008531] font-bold">LIVE</span>
+                <span className="text-[9px] text-[#222]">[{pingLatency}ms]</span>
               </>
             ) : connectionStatus === 'RECONNECTING' ? (
               <>
-                <span className="w-2 h-2 rounded-full bg-crt-amber animate-ping"></span>
-                <span className="text-crt-amber">RECONNECTING...</span>
+                <span className="w-2 h-2 bg-crt-amber border border-[#885500] animate-ping"></span>
+                <span className="text-crt-amber font-bold">RECONNECTING...</span>
               </>
             ) : connectionStatus === 'CONNECTING' ? (
               <>
-                <span className="w-2 h-2 rounded-full bg-crt-amber animate-pulse"></span>
-                <span className="text-crt-amber">CONNECTING</span>
+                <span className="w-2 h-2 bg-crt-amber border border-[#885500] animate-pulse"></span>
+                <span className="text-crt-amber font-bold">CONNECTING</span>
               </>
             ) : (
               <>
-                <span className="w-2 h-2 rounded-full bg-crt-bearish"></span>
-                <span className="text-crt-bearish">OFFLINE</span>
+                <span className="w-2 h-2 bg-crt-bearish border border-[#550000]"></span>
+                <span className="text-crt-bearish font-bold">OFFLINE</span>
               </>
             )}
           </div>
 
           {/* Quick Balance */}
           <div className="border-l border-bevel-shadow pl-2 flex items-center space-x-1 font-bold">
-            <span className="text-[#333] font-semibold">BAL:</span>
-            <span className="text-titlebar-navy">${equity.toFixed(2)}</span>
-            <span className="text-[8px] text-[#444]">USDT</span>
+            <span className="text-black font-bold">BAL:</span>
+            <span className="text-titlebar-navy font-bold">${equity.toFixed(2)}</span>
+            <span className="text-[9px] text-black font-bold">USDT</span>
           </div>
 
           {/* Audio Speaker Icon Toggle */}

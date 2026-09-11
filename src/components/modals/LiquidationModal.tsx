@@ -29,20 +29,20 @@ export const LiquidationModal: React.FC = () => {
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
       {/* Windows 98 Critical Error Dialog */}
-      <div className="w-full max-w-md win-outset bg-win-base font-ui shadow-2xl animate-shake">
+      <div className="w-full max-w-md window-outer-frame bg-win-base font-ui shadow-2xl animate-shake">
         {/* Titlebar with critical red banner */}
-        <div className="bg-gradient-to-r from-[#880000] to-[#CC0000] px-2 py-1 flex items-center justify-between select-none">
+        <div className="h-titlebar-height bg-gradient-to-r from-[#880000] to-[#BA1A1A] px-2 py-1 flex items-center justify-between select-none">
           <div className="flex items-center gap-2">
-            <PixelIcon name="warning" size={16} className="text-white" />
-            <span className="text-white font-bold text-xs tracking-wider">
+            <PixelIcon name="warning" size={14} className="text-white" />
+            <span className="text-white font-bold text-[11px] tracking-wider">
               FATAL ERROR: MARGIN CALL &amp; LIQUIDATION
             </span>
           </div>
           <button
             onClick={closeModal}
-            className="win-outset bg-win-base px-1.5 py-0.5 text-xs font-bold active:win-inset leading-none"
+            className="w-[16px] h-[14px] win-btn bg-win-base text-black hover:bg-[#BA1A1A] hover:text-white text-[9px] font-bold flex items-center justify-center active:translate-x-0.5 active:translate-y-0.5"
           >
-            ×
+            ✕
           </button>
         </div>
 
@@ -101,18 +101,18 @@ export const LiquidationModal: React.FC = () => {
           )}
 
           {/* Dialog Action Buttons */}
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-win-highlight">
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-bevel-shadow">
             {isFaucetAvailable ? (
               <button
                 onClick={handleClaimFaucet}
-                className="win-outset bg-[#008080] text-white px-4 py-1.5 text-xs font-bold active:win-inset hover:brightness-110 shadow"
+                className="win-btn bg-[#008531] hover:bg-[#009938] text-white px-4 py-1 text-xs font-bold active:translate-x-0.5 active:translate-y-0.5 shadow"
               >
                 Claim Bailout (+10 USDT)
               </button>
             ) : null}
             <button
               onClick={closeModal}
-              className="win-outset bg-win-base px-4 py-1.5 text-xs font-bold active:win-inset text-black"
+              className="win-btn bg-win-base px-4 py-1 text-xs font-bold active:translate-x-0.5 active:translate-y-0.5 text-black"
             >
               Acknowledge &amp; Dismiss
             </button>

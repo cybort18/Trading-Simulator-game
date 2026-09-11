@@ -153,7 +153,7 @@ export const DegenVaultWindow: React.FC = () => {
                   ONLINE
                 </span>
               </div>
-              <div className="flex items-center space-x-2 font-mono text-[10px] text-bevel-shadow">
+              <div className="flex items-center space-x-2 font-mono text-[10px] text-[#333] font-semibold">
                 <span>Node: <strong className="text-black">#NODE-7729</strong></span>
                 <span>•</span>
                 <span>Build: <strong className="text-black">v4.10.1998</strong></span>
@@ -164,12 +164,12 @@ export const DegenVaultWindow: React.FC = () => {
           {/* Rank Badge & XP Track */}
           <div className="flex flex-col items-end min-w-[210px]">
             <div className="flex items-center space-x-1.5 mb-0.5">
-              <span className="text-[10px] text-bevel-shadow font-bold">RANK:</span>
+              <span className="text-[10px] text-black font-bold">RANK:</span>
               <span className={`px-1.5 py-0.5 text-[10px] uppercase ${profileRank.badgeClass}`}>
                 {profileRank.rank}
               </span>
             </div>
-            <div className="w-full text-right font-mono text-[9px] text-bevel-shadow mb-0.5">
+            <div className="w-full text-right font-mono text-[9px] text-[#222] font-semibold mb-0.5">
               XP: {profileRank.currentXp} / {profileRank.targetXp} →{' '}
               <span className="text-titlebar-navy font-bold">{profileRank.nextRank}</span>
             </div>
@@ -297,7 +297,7 @@ export const DegenVaultWindow: React.FC = () => {
 
               if (isClaimed) {
                 return (
-                  <div key={tier.day} className="win-inset bg-surface-high p-1 flex flex-col items-center text-center opacity-85">
+                  <div key={tier.day} className="win-inset bg-[#E8E8E8] p-1 flex flex-col items-center text-center">
                     <span className="font-mono text-[8px] text-[#333] font-bold">DAY {tier.day}</span>
                     <PixelIcon name="check" size={16} className="text-crt-bullish my-0.5" />
                     <span className="font-mono font-bold text-[9px] text-[#006622]">{tier.label.split(' ')[0]} {tier.label.split(' ')[1]}</span>
@@ -312,8 +312,8 @@ export const DegenVaultWindow: React.FC = () => {
                     key={tier.day}
                     className={`p-1 flex flex-col items-center text-center relative ${
                       isReady
-                        ? 'win-outset bg-[#FFFDE6] border-2 border-crt-amber shadow-md animate-pulse'
-                        : 'win-inset bg-surface-high opacity-90'
+                        ? 'win-outset bg-[#FFFDE6] border-2 border-[#FFAA00] shadow-[0_0_8px_rgba(255,170,0,0.6)] animate-pulse'
+                        : 'win-outset bg-white border border-[#FFAA00]'
                     }`}
                   >
                     <span className="font-mono text-[8px] text-titlebar-navy font-bold">DAY {tier.day}</span>
@@ -325,7 +325,7 @@ export const DegenVaultWindow: React.FC = () => {
                     <span className="font-mono font-bold text-[10px] text-black">{tier.label.split(' ')[0]} {tier.label.split(' ')[1]}</span>
                     <span
                       className={`font-mono text-[7px] font-bold px-1 ${
-                        isReady ? 'bg-crt-amber text-black' : 'bg-surface-low text-[#444]'
+                        isReady ? 'bg-crt-amber text-black' : 'bg-surface-low text-black'
                       }`}
                     >
                       {isReady ? 'READY!' : formatCountdown(remainingMs)}
@@ -335,11 +335,11 @@ export const DegenVaultWindow: React.FC = () => {
               }
 
               return (
-                <div key={tier.day} className="win-inset bg-surface-high p-1 flex flex-col items-center text-center text-[#404040]">
-                  <span className="font-mono text-[8px] font-bold">DAY {tier.day}</span>
+                <div key={tier.day} className="win-inset bg-[#DFDFDF] p-1 flex flex-col items-center text-center text-[#404040]">
+                  <span className="font-mono text-[8px] font-bold text-[#333]">DAY {tier.day}</span>
                   <PixelIcon name="lock" size={16} className="text-[#555] my-0.5" />
                   <span className="font-mono font-bold text-[9px] text-black">{tier.label.split(' ')[0]} {tier.label.split(' ')[1]}</span>
-                  <span className="font-mono text-[7px] text-[#666] font-semibold">
+                  <span className="font-mono text-[7px] text-[#555] font-semibold">
                     {tier.day === 7 ? '+MYSTERY' : 'Locked'}
                   </span>
                 </div>
@@ -361,11 +361,11 @@ export const DegenVaultWindow: React.FC = () => {
               disabled={!canClaim}
               className={`w-full py-2 px-3 flex items-center justify-center space-x-2 ${
                 !canClaim
-                  ? 'win-inset bg-win-base text-bevel-shadow cursor-not-allowed'
-                  : 'win-btn bg-[#008531] hover:bg-[#009938] text-white active:translate-x-0.5 active:translate-y-0.5 shadow-md'
+                  ? 'win-inset bg-win-base text-[#666] font-bold cursor-not-allowed'
+                  : 'win-btn bg-[#008531] hover:bg-[#009938] text-white active:translate-x-0.5 active:translate-y-0.5 shadow-md font-bold'
               }`}
             >
-              <div className="border border-dotted border-white w-full py-0.5 flex items-center justify-center space-x-2">
+              <div className="border border-dotted border-white/80 w-full py-1 flex items-center justify-center space-x-2">
                 <PixelIcon name="sparkles" size={14} className={canClaim ? 'text-crt-bullish animate-bounce' : 'text-[#888]'} />
                 <span className="font-headline font-bold text-[12px] uppercase tracking-wider">
                   {canClaim

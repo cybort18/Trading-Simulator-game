@@ -151,7 +151,7 @@ export const TurboTradeWindow: React.FC = () => {
         <div className="w-full md:w-[220px] flex flex-col gap-1 flex-shrink-0">
           {/* Pair Selector Strip */}
           <div className="win-inset bg-win-base p-1 flex flex-col gap-1">
-            <div className="font-bold text-[10px] text-bevel-dark uppercase">Select Contract:</div>
+            <div className="font-bold text-[10px] text-black uppercase">Select Contract:</div>
             <div className="grid grid-cols-3 gap-1">
               {(['BTCUSDT', 'ETHUSDT', 'SOLUSDT'] as const).map((pair) => (
                 <button
@@ -160,7 +160,7 @@ export const TurboTradeWindow: React.FC = () => {
                   className={`py-1 text-[10px] font-bold ${
                     selectedPair === pair
                       ? 'win-btn-pressed bg-win-pressed font-extrabold text-titlebar-navy'
-                      : 'win-btn bg-win-base'
+                      : 'win-btn bg-win-base text-black'
                   }`}
                 >
                   {pair.replace('USDT', '')}
@@ -171,9 +171,9 @@ export const TurboTradeWindow: React.FC = () => {
 
           {/* Real-time Live Ticker Card */}
           <div className="win-inset-deep p-2 text-white flex flex-col gap-1.5 crt-grid bg-[#121212]">
-            <div className="flex justify-between items-center text-[10px] text-[#C0C0C0]">
+            <div className="flex justify-between items-center text-[10px] text-[#E0E0E0]">
               <span className="font-bold font-mono text-white">{pairLabelMap[selectedPair]} PERP</span>
-              <span className="win-inset px-1 bg-[#1A1A1A] text-crt-bullish text-[9px] font-mono">
+              <span className="win-inset px-1 bg-[#1A1A1A] text-crt-bullish text-[9px] font-mono font-bold">
                 {connectionStatus === 'CONNECTED' ? 'LIVE ●' : connectionStatus}
               </span>
             </div>
@@ -196,7 +196,7 @@ export const TurboTradeWindow: React.FC = () => {
             </div>
 
             <div className="flex items-center justify-between text-[11px] font-mono">
-              <span className="text-gray-300 font-medium">24h Change:</span>
+              <span className="text-[#E0E0E0] font-semibold">24h Change:</span>
               <span
                 className={`font-bold ${
                   currentTicker.change24h >= 0 ? 'text-crt-bullish' : 'text-crt-bearish'
@@ -207,23 +207,23 @@ export const TurboTradeWindow: React.FC = () => {
               </span>
             </div>
 
-            <div className="border-t border-[#333] pt-1 flex flex-col gap-0.5 text-[10px] font-mono text-[#C0C0C0]">
+            <div className="border-t border-[#333] pt-1 flex flex-col gap-0.5 text-[10px] font-mono text-[#D0D0D0]">
               <div className="flex justify-between">
-                <span className="text-[#DDD]">24h High:</span>
-                <span className="text-white font-semibold">${currentTicker.high24h.toFixed(2)}</span>
+                <span className="text-[#D0D0D0]">24h High:</span>
+                <span className="text-white font-bold">${currentTicker.high24h.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#DDD]">24h Low:</span>
-                <span className="text-white font-semibold">${currentTicker.low24h.toFixed(2)}</span>
+                <span className="text-[#D0D0D0]">24h Low:</span>
+                <span className="text-white font-bold">${currentTicker.low24h.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#DDD]">24h Volume:</span>
-                <span className="text-white font-semibold">
+                <span className="text-[#D0D0D0]">24h Volume:</span>
+                <span className="text-white font-bold">
                   {currentTicker.volume24h.toLocaleString('en-US', { maximumFractionDigits: 1 })}
                 </span>
               </div>
               <div className="flex justify-between border-t border-[#2A2A2A] pt-0.5 mt-0.5">
-                <span className="text-[#DDD]">Funding Rate:</span>
+                <span className="text-[#D0D0D0]">Funding Rate:</span>
                 <span className="text-crt-amber font-bold">
                   {(currentTicker.fundingRate * 100).toFixed(4)}% in {fundingCountdown}
                 </span>
@@ -234,15 +234,15 @@ export const TurboTradeWindow: React.FC = () => {
           {/* Account Margin Inset */}
           <div className="win-inset bg-win-base p-1.5 flex flex-col gap-1 text-[10px]">
             <div className="flex justify-between">
-              <span className="text-[#333] font-semibold">Account Equity:</span>
+              <span className="text-black font-bold">Account Equity:</span>
               <span className="font-mono font-bold text-titlebar-navy">{equity.toFixed(2)} USDT</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-[#333] font-semibold">Available Margin:</span>
+              <span className="text-black font-bold">Available Margin:</span>
               <span className="font-mono font-bold text-black">{availableMargin.toFixed(2)} USDT</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-[#333] font-semibold">Position Margin:</span>
+              <span className="text-black font-bold">Position Margin:</span>
               <span className="font-mono font-bold text-crt-amber">{lockedMargin.toFixed(2)} USDT</span>
             </div>
           </div>
@@ -329,13 +329,13 @@ export const TurboTradeWindow: React.FC = () => {
             {/* Positions Table */}
             {bottomTab === 'positions' ? (
               positions.length === 0 ? (
-                <div className="flex-1 p-4 font-mono text-[11px] text-[#666] font-semibold flex items-center justify-center">
+                <div className="flex-1 p-4 font-mono text-[11px] text-[#888] font-bold flex items-center justify-center">
                   NO ACTIVE OPEN POSITIONS. SELECT CONTRACT &amp; EXECUTE AN ORDER ON RIGHT PANEL.
                 </div>
               ) : (
                 <div className="flex-1 overflow-auto mt-1 win-inset-deep bg-[#121212] p-0.5">
                   <table className="w-full text-left font-mono text-[10px] text-white">
-                    <thead className="bg-[#262626] text-white border-b border-[#3E3E3E] sticky top-0 font-bold">
+                    <thead className="bg-[#202020] text-[#E0E0E0] border-b-2 border-[#404040] sticky top-0 font-bold">
                       <tr>
                         <th className="p-1">Pair</th>
                         <th className="p-1">Direction</th>
@@ -360,7 +360,7 @@ export const TurboTradeWindow: React.FC = () => {
                                 className={`px-1 py-0.2 border font-bold ${
                                   pos.direction === 'LONG'
                                     ? 'bg-[#003311] text-[#00FF66] border-[#00FF66]'
-                                    : 'bg-[#330000] text-[#FF4444] border-[#FF4444]'
+                                    : 'bg-[#330000] text-[#FF3333] border-[#FF3333]'
                                 }`}
                               >
                                 {pos.direction} {pos.leverage}x
@@ -407,13 +407,13 @@ export const TurboTradeWindow: React.FC = () => {
               )
             ) : (
               tradeHistory.length === 0 ? (
-                <div className="flex-1 p-4 font-mono text-[11px] text-[#666] font-semibold flex items-center justify-center">
+                <div className="flex-1 p-4 font-mono text-[11px] text-[#888] font-bold flex items-center justify-center">
                   NO PAST ORDERS RECORDED IN THIS SESSION.
                 </div>
               ) : (
                 <div className="flex-1 overflow-auto mt-1 win-inset-deep bg-[#121212] p-0.5">
                   <table className="w-full text-left font-mono text-[10px] text-white">
-                    <thead className="bg-[#262626] text-white border-b border-[#3E3E3E] sticky top-0 font-bold">
+                    <thead className="bg-[#202020] text-[#E0E0E0] border-b-2 border-[#404040] sticky top-0 font-bold">
                       <tr>
                         <th className="p-1">Time</th>
                         <th className="p-1">Pair</th>
@@ -431,7 +431,7 @@ export const TurboTradeWindow: React.FC = () => {
                           <td className="p-1 text-[#C0C0C0]">{new Date(item.closedAt).toLocaleTimeString()}</td>
                           <td className="p-1 font-bold text-white">{pairLabelMap[item.pair]}</td>
                           <td className="p-1">
-                            <span className={`font-bold ${item.direction === 'LONG' ? 'text-[#00FF66]' : 'text-[#FF4444]'}`}>
+                            <span className={`font-bold ${item.direction === 'LONG' ? 'text-[#00FF66]' : 'text-[#FF3333]'}`}>
                               {item.direction} {item.leverage}x
                             </span>
                           </td>
@@ -610,8 +610,8 @@ export const TurboTradeWindow: React.FC = () => {
             </div>
 
             {leverage >= 20 && (
-              <div className="bg-[#FFE5E5] text-crt-bearish text-[8.5px] font-bold p-1 border border-crt-bearish flex items-center gap-1">
-                <PixelIcon name="warning" size={12} className="flex-shrink-0" />
+              <div className="bg-[#FFF3CD] text-[#7A4B00] text-[9px] font-bold p-1 border border-[#FFAA00] flex items-center gap-1.5">
+                <PixelIcon name="warning" size={12} className="flex-shrink-0 text-[#7A4B00]" />
                 <span>Warning: {leverage}x High Liquidation Risk</span>
               </div>
             )}
@@ -621,7 +621,7 @@ export const TurboTradeWindow: React.FC = () => {
           <div className="flex flex-col gap-1 text-[10px]">
             <div className="flex justify-between">
               <span className="font-bold text-black">Order Margin:</span>
-              <span className="font-mono text-[#222] font-semibold">Avail: ${availableMargin.toFixed(2)} USDT</span>
+              <span className="font-mono text-black font-semibold">Avail: ${availableMargin.toFixed(2)} USDT</span>
             </div>
 
             <div className="win-inset-deep bg-white flex items-center px-1.5 py-0.5">
@@ -664,34 +664,34 @@ export const TurboTradeWindow: React.FC = () => {
           {/* Real-time Pre-trade Calculation Box */}
           <div className="win-inset-deep bg-[#121212] p-2 font-mono text-[9.5px] text-white flex flex-col gap-1">
             <div className="flex justify-between">
-              <span className="text-[#C0C0C0] font-semibold">Margin Cost:</span>
+              <span className="text-[#D0D0D0] font-semibold">Margin Cost:</span>
               <span className="text-white font-bold">${marginAmount.toFixed(2)} USDT</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-[#C0C0C0] font-semibold">Notional Value:</span>
+              <span className="text-[#D0D0D0] font-semibold">Notional Value:</span>
               <span className="text-white font-bold">${notional.toFixed(2)} USDT</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-[#C0C0C0] font-semibold">Max Position:</span>
+              <span className="text-[#D0D0D0] font-semibold">Max Position:</span>
               <span className="text-crt-bullish font-bold">${maxPositionSize.toFixed(2)} USDT</span>
             </div>
             <div className="flex justify-between border-t border-[#333] pt-1">
-              <span className="text-[#C0C0C0] font-semibold">Est. Liq (Long):</span>
+              <span className="text-[#D0D0D0] font-semibold">Est. Liq (Long):</span>
               <span className="text-crt-bullish font-bold">${estLiqLong.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-[#C0C0C0] font-semibold">Est. Liq (Short):</span>
+              <span className="text-[#D0D0D0] font-semibold">Est. Liq (Short):</span>
               <span className="text-crt-bearish font-bold">${estLiqShort.toFixed(2)}</span>
             </div>
             <div className="flex justify-between border-t border-[#333] pt-1">
-              <span className="text-[#C0C0C0] font-semibold">Taker Fee (0.05%):</span>
+              <span className="text-[#D0D0D0] font-semibold">Taker Fee (0.05%):</span>
               <span className="text-white font-bold">${fee.toFixed(4)}</span>
             </div>
           </div>
 
           {/* Order Error Notification */}
           {orderError && (
-            <div className="bg-[#FFE5E5] text-crt-bearish text-[8.5px] font-bold p-1 border border-crt-bearish">
+            <div className="bg-[#FFE5E5] text-[#990000] text-[9px] font-bold p-1 border border-[#FF3333]">
               ⚠ {orderError}
             </div>
           )}

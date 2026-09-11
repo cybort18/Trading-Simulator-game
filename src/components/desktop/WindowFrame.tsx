@@ -162,9 +162,9 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
         {/* Left: Window Icon & Title */}
         <div className="flex items-center space-x-1.5 overflow-hidden pr-2">
           <span className="flex-shrink-0">
-            <PixelIcon name={windowState.icon} size={14} className={isActive ? 'text-white' : 'text-win-base'} />
+            <PixelIcon name={windowState.icon} size={14} className={isActive ? 'text-white' : 'text-[#DFDFDF]'} />
           </span>
-          <span className="font-bold text-[11px] leading-tight truncate tracking-wide">
+          <span className={`font-bold text-[11px] leading-tight truncate tracking-wide ${isActive ? 'text-white' : 'text-[#DFDFDF]'}`}>
             {windowState.title}
           </span>
         </div>
@@ -174,7 +174,7 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
           {hasHelp && (
             <button
               onClick={() => alert(`Help for ${windowState.title}\n\nCryptoOS 98 Futures Trading Terminal v1.0`)}
-              className="w-[15px] h-[14px] win-btn text-bevel-dark text-[9px] font-bold flex items-center justify-center active:translate-x-0.5 active:translate-y-0.5"
+              className="w-[16px] h-[14px] win-btn text-black text-[9px] font-bold flex items-center justify-center active:translate-x-0.5 active:translate-y-0.5"
               title="Help"
             >
               ?
@@ -182,21 +182,21 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
           )}
           <button
             onClick={() => minimizeWindow(id)}
-            className="w-[15px] h-[14px] win-btn text-bevel-dark text-[9px] font-bold flex items-center justify-center active:translate-x-0.5 active:translate-y-0.5"
+            className="w-[16px] h-[14px] win-btn text-black text-[9px] font-bold flex items-center justify-center active:translate-x-0.5 active:translate-y-0.5"
             title="Minimize"
           >
             _
           </button>
           <button
             onClick={() => maximizeWindow(id)}
-            className="w-[15px] h-[14px] win-btn text-bevel-dark text-[9px] font-bold flex items-center justify-center active:translate-x-0.5 active:translate-y-0.5"
+            className="w-[16px] h-[14px] win-btn text-black text-[9px] font-bold flex items-center justify-center active:translate-x-0.5 active:translate-y-0.5"
             title={isMaximized ? 'Restore' : 'Maximize'}
           >
             {isMaximized ? '🗗' : '🗖'}
           </button>
           <button
             onClick={() => closeWindow(id)}
-            className="w-[15px] h-[14px] win-btn text-error text-[9px] font-extrabold flex items-center justify-center active:translate-x-0.5 active:translate-y-0.5"
+            className="w-[16px] h-[14px] win-btn text-error hover:bg-error hover:text-white text-[9px] font-extrabold flex items-center justify-center active:translate-x-0.5 active:translate-y-0.5"
             title="Close"
           >
             ✕
@@ -206,7 +206,7 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
 
       {/* Classic Menu Bar (File, Edit, View...) */}
       {menuItems && menuItems.length > 0 && (
-        <nav className="h-menubar-height bg-win-base border-b border-bevel-shadow flex items-center px-1 space-x-1 text-on-surface text-[11px]">
+        <nav className="h-menubar-height bg-win-base border-b border-bevel-shadow flex items-center px-1 space-x-1 text-black text-[11px] font-ui">
           {menuItems.map((item, idx) => (
             <button
               key={idx}
@@ -226,7 +226,7 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
 
       {/* Recessed Status Bar Footer */}
       {statusContent && (
-        <footer className="h-5 bg-win-base border-t border-bevel-highlight flex items-center justify-between px-1 text-[10px] text-black">
+        <footer className="h-5 bg-win-base border-t border-bevel-highlight flex items-center justify-between px-2 text-[10px] text-black font-ui">
           {statusContent}
         </footer>
       )}

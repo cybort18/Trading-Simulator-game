@@ -172,20 +172,20 @@ export const LeaderboardWindow: React.FC = () => {
         <div className="grid grid-cols-3 gap-1.5 flex-shrink-0">
           {/* #2 Silver */}
           {top2 && (
-            <div className="win-inset bg-win-base p-1.5 flex items-center space-x-2">
-              <div className="w-9 h-9 win-outset bg-surface-high flex flex-col items-center justify-center font-bold text-[11px]">
+            <div className="win-outset bg-surface-high p-1.5 flex items-center space-x-2 border border-[#A0A0A0]">
+              <div className="w-9 h-9 win-inset bg-[#E0E0E0] flex flex-col items-center justify-center font-bold text-[11px]">
                 <span className="text-[#333] font-bold">#2</span>
                 <span className="text-[12px] leading-none">{top2.avatar}</span>
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-center">
                   <span className="font-bold text-[11px] truncate text-black">{top2.name}</span>
-                  <span className="win-inset bg-white px-1 text-[8px] text-titlebar-navy font-mono font-bold">{top2.badge}</span>
+                  <span className="win-outset bg-[#D0D0D0] px-1 text-[8px] text-black font-mono font-bold">{top2.badge}</span>
                 </div>
                 <div className={`font-mono text-[13px] font-bold ${top2.roiNum >= 0 ? 'text-[#008531]' : 'text-crt-bearish'}`}>
                   {top2.roiNum >= 0 ? '+' : ''}{top2.roiNum.toFixed(1)}% ROI
                 </div>
-                <div className="text-[10px] font-mono text-[#333] font-semibold">
+                <div className="text-[10px] font-mono text-[#222] font-semibold">
                   PnL: {top2.pnlNum >= 0 ? '+' : ''}${top2.pnlNum.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </div>
               </div>
@@ -194,15 +194,15 @@ export const LeaderboardWindow: React.FC = () => {
 
           {/* #1 Gold */}
           {top1 && (
-            <div className="win-inset bg-win-base p-1.5 flex items-center space-x-2 border-2 border-crt-amber shadow-sm">
-              <div className="w-10 h-10 win-outset bg-[#FFF5D6] flex flex-col items-center justify-center font-bold text-[12px] border border-crt-amber">
+            <div className="win-outset bg-[#FFF5D6] p-1.5 flex items-center space-x-2 border-2 border-crt-amber shadow-sm">
+              <div className="w-10 h-10 win-inset bg-[#FFE8A0] flex flex-col items-center justify-center font-bold text-[12px] border border-crt-amber">
                 <span className="text-crt-amber font-extrabold">#1</span>
                 <span className="text-[14px] leading-none">{top1.avatar}</span>
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-center">
                   <span className="font-extrabold text-[12px] truncate text-black">{top1.name}</span>
-                  <span className="win-outset bg-crt-amber text-black px-1 text-[8px] font-bold">{top1.badge}</span>
+                  <span className="win-outset bg-crt-amber text-black px-1.5 text-[8px] font-bold">{top1.badge}</span>
                 </div>
                 <div className={`font-mono text-[14px] font-bold ${top1.roiNum >= 0 ? 'text-[#008531]' : 'text-crt-bearish'}`}>
                   {top1.roiNum >= 0 ? '+' : ''}{top1.roiNum.toFixed(1)}% ROI
@@ -216,20 +216,20 @@ export const LeaderboardWindow: React.FC = () => {
 
           {/* #3 Bronze */}
           {top3 && (
-            <div className="win-inset bg-win-base p-1.5 flex items-center space-x-2">
-              <div className="w-9 h-9 win-outset bg-surface-high flex flex-col items-center justify-center font-bold text-[11px]">
+            <div className="win-outset bg-surface-high p-1.5 flex items-center space-x-2 border border-[#C8A165]">
+              <div className="w-9 h-9 win-inset bg-[#EAD8C0] flex flex-col items-center justify-center font-bold text-[11px]">
                 <span className="text-[#995522] font-bold">#3</span>
                 <span className="text-[12px] leading-none">{top3.avatar}</span>
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-center">
                   <span className="font-bold text-[11px] truncate text-black">{top3.name}</span>
-                  <span className="win-inset bg-white px-1 text-[8px] text-[#333] font-mono font-bold">{top3.badge}</span>
+                  <span className="win-outset bg-[#C8A165] px-1 text-[8px] text-black font-mono font-bold">{top3.badge}</span>
                 </div>
                 <div className={`font-mono text-[13px] font-bold ${top3.roiNum >= 0 ? 'text-[#008531]' : 'text-crt-bearish'}`}>
                   {top3.roiNum >= 0 ? '+' : ''}{top3.roiNum.toFixed(1)}% ROI
                 </div>
-                <div className="text-[10px] font-mono text-[#333] font-semibold">
+                <div className="text-[10px] font-mono text-[#222] font-semibold">
                   PnL: {top3.pnlNum >= 0 ? '+' : ''}${top3.pnlNum.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </div>
               </div>
@@ -287,10 +287,12 @@ export const LeaderboardWindow: React.FC = () => {
 
           {/* Body Rows */}
           <div className="flex-1 overflow-y-auto divide-y divide-[#E0E0E0] font-mono text-[10px]">
-            {sortedData.map((row) => (
+            {sortedData.map((row, index) => (
               <div
                 key={row.name}
-                className="grid grid-cols-12 px-1 py-1 items-center hover:bg-[#F0F4FF] transition-colors"
+                className={`grid grid-cols-12 px-1 py-1 items-center hover:bg-[#E8F0FE] transition-colors ${
+                  index % 2 === 1 ? 'bg-[#F7F7F7]' : 'bg-white'
+                }`}
               >
                 <div className="col-span-1 text-center font-bold text-black">
                   #{row.rankNum} {row.avatar}
