@@ -114,6 +114,10 @@ export const TurboTradeWindow: React.FC = () => {
     : currentPrice;
 
   const marginAmount = Number(orderSize) || 0;
+  const currentMarginPercent =
+    availableMargin > 0 && !isNaN(marginAmount)
+      ? Math.min(100, Math.max(0, Math.round((marginAmount / availableMargin) * 100)))
+      : 0;
   const notional = marginAmount * leverage;
   const fee = notional * DEFAULT_TAKER_FEE_RATE;
   const maxPositionSize = availableMargin * leverage;
@@ -867,11 +871,13 @@ export const TurboTradeWindow: React.FC = () => {
             )}
           </div>
 
-          {/* Order Size Input */}
-          <div className="flex flex-col gap-1 text-[10px]">
-            <div className="flex justify-between">
-              <span className="font-bold text-black">Order Margin:</span>
-              <span className="font-mono text-black font-semibold">Avail: ${availableMargin.toFixed(2)} USDT</span>
+          {/* Order Margin / Size Slider & Input */}
+          <div className="win-inset bg-surface-low p-1.5 flex flex-col gap-1.5 text-[10px]">
+            <div className="flex justify-between items-center font-bold">
+              <span className="text-black">Order Margin:</span>
+              <span className="font-mono text-black font-semibold text-[9.5px]">
+                Avail: ${availableMargin.toFixed(2)} USDT
+              </span>
             </div>
 
             <div className="win-inset-deep bg-white flex items-center px-1.5 py-0.5">
@@ -884,30 +890,74 @@ export const TurboTradeWindow: React.FC = () => {
                 }}
                 className="w-full bg-transparent font-mono text-[14px] font-bold text-black border-none outline-none p-0"
               />
-              <span className="font-bold text-[#333] text-[11px]">USDT</span>
+              <span className="font-bold text-[#333] text-[11px] ml-1">USDT</span>
             </div>
 
-            {/* Percentage Presets */}
+            {/* Margin Slider */}
+            <div className="flex items-center gap-1.5">
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                disabled={availableMargin <= 0}
+                value={currentMarginPercent}
+                onChange={(e) => {
+                  const pct = Number(e.target.value);
+                  setOrderError(null);
+                  if (pct === 0) {
+                    setOrderSize('0.00');
+                  } else if (pct === 100) {
+                    const maxMargin = Math.max(0, availableMargin * 0.98);
+                    setOrderSize(maxMargin.toFixed(2));
+                  } else {
+                    const margin = (availableMargin * (pct / 100)).toFixed(2);
+                    setOrderSize(margin);
+                  }
+                }}
+                className="w-full h-3 cursor-ew-resize accent-titlebar-navy disabled:opacity-50"
+              />
+              <span className="font-mono text-[10px] font-bold text-titlebar-navy w-9 text-right flex-shrink-0">
+                {currentMarginPercent}%
+              </span>
+            </div>
+
+            {/* Percentage Preset Buttons */}
             <div className="grid grid-cols-4 gap-1 text-[10px]">
-              {['25%', '50%', '75%', 'MAX'].map((pct) => (
-                <button
-                  key={pct}
-                  onClick={() => {
-                    setOrderError(null);
-                    if (pct === '25%') setOrderSize((availableMargin * 0.25).toFixed(2));
-                    if (pct === '50%') setOrderSize((availableMargin * 0.50).toFixed(2));
-                    if (pct === '75%') setOrderSize((availableMargin * 0.75).toFixed(2));
-                    if (pct === 'MAX') {
-                      // Max available leaving fee buffer
-                      const maxMargin = Math.max(0, availableMargin * 0.98);
-                      setOrderSize(maxMargin.toFixed(2));
-                    }
-                  }}
-                  className="win-btn py-0.5 text-center font-bold active:translate-x-0.5 active:translate-y-0.5 text-black"
-                >
-                  {pct}
-                </button>
-              ))}
+              {['25%', '50%', '75%', 'MAX'].map((pct) => {
+                const targetPct = pct === '25%' ? 25 : pct === '50%' ? 50 : pct === '75%' ? 75 : 98;
+                const isSelected =
+                  pct === 'MAX'
+                    ? currentMarginPercent >= 97
+                    : Math.abs(currentMarginPercent - targetPct) <= 1;
+
+                return (
+                  <button
+                    key={pct}
+                    type="button"
+                    disabled={availableMargin <= 0}
+                    onClick={() => {
+                      setOrderError(null);
+                      soundFXService.playKeyClick();
+                      if (pct === '25%') setOrderSize((availableMargin * 0.25).toFixed(2));
+                      if (pct === '50%') setOrderSize((availableMargin * 0.50).toFixed(2));
+                      if (pct === '75%') setOrderSize((availableMargin * 0.75).toFixed(2));
+                      if (pct === 'MAX') {
+                        // Max available leaving fee buffer
+                        const maxMargin = Math.max(0, availableMargin * 0.98);
+                        setOrderSize(maxMargin.toFixed(2));
+                      }
+                    }}
+                    className={`py-0.5 text-center font-bold text-[9px] ${
+                      isSelected
+                        ? 'win-btn-pressed bg-win-pressed text-titlebar-navy font-extrabold'
+                        : 'win-btn bg-win-base text-black'
+                    }`}
+                  >
+                    {pct}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
