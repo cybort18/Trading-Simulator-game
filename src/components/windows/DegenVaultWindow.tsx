@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { WindowFrame } from '@/components/desktop/WindowFrame';
+import { WindowFrame, WindowMenuCategory } from '@/components/desktop/WindowFrame';
 import { PixelIcon } from '@/components/common/PixelIcon';
 import { useWalletStore, DAILY_REWARD_TIERS } from '@/stores/useWalletStore';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useWindowStore } from '@/stores/useWindowStore';
+import { useTradingStore } from '@/stores/useTradingStore';
 import { Web3AuthService } from '@/services/Web3AuthService';
 import confetti from 'canvas-confetti';
 import { soundFXService } from '@/services/SoundFXService';
@@ -78,8 +80,35 @@ export const DegenVaultWindow: React.FC = () => {
   const walletAddress = useAuthStore((state) => state.walletAddress);
   const openConnectModal = useAuthStore((state) => state.openConnectModal);
 
+  const recalculateEquity = useWalletStore((state) => state.recalculateEquity);
+  const positions = useTradingStore((state) => state.positions);
+  const totalUnrealizedPnl = positions.reduce((sum, p) => sum + (p.unrealizedPnl || 0), 0);
+  const closeWindow = useWindowStore((state) => state.closeWindow);
+  const openWindow = useWindowStore((state) => state.openWindow);
+  const focusWindow = useWindowStore((state) => state.focusWindow);
+
   const [remainingMs, setRemainingMs] = useState<number>(0);
   const [claimFeedback, setClaimFeedback] = useState<string | null>(null);
+  const [lastRefreshedTime, setLastRefreshedTime] = useState<string>('');
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+
+  // Auto-sync equity periodically when user holds active positions
+  useEffect(() => {
+    if (positions.length > 0) {
+      recalculateEquity(totalUnrealizedPnl);
+    }
+  }, [positions, totalUnrealizedPnl, recalculateEquity]);
+
+  const handleRefreshBalance = () => {
+    soundFXService.playKeyClick();
+    setIsRefreshing(true);
+    recalculateEquity(totalUnrealizedPnl);
+    const now = new Date();
+    setLastRefreshedTime(
+      `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`
+    );
+    setTimeout(() => setIsRefreshing(false), 500);
+  };
 
   useEffect(() => {
     const updateCountdown = () => {
@@ -122,10 +151,116 @@ export const DegenVaultWindow: React.FC = () => {
     });
   };
 
+  const degenVaultMenus: WindowMenuCategory[] = [
+    {
+      name: 'File',
+      items: [
+        {
+          label: 'Export Ledger Summary',
+          shortcut: 'Ctrl+S',
+          onClick: () => {
+            const summary = `CryptoOS 98 - Financial Ledger Report\nTrader: ${username}\nEquity: $${equity.toFixed(2)} USDT\nAvailable Margin: $${availMargin.toFixed(2)} USDT\nLocked Margin: $${lockedMargin.toFixed(2)} USDT\nTotal Trades: ${totalTrades} (Win Rate: ${winRate.toFixed(1)}%)\nAll-Time ROI: ${allTimeRoi >= 0 ? '+' : ''}${allTimeRoi.toFixed(1)}%`;
+            navigator.clipboard?.writeText?.(summary);
+            alert('Financial Ledger Summary copied to clipboard!\n\n' + summary);
+          },
+        },
+        { divider: true, label: '' },
+        {
+          label: 'Close Vault',
+          shortcut: 'Alt+F4',
+          onClick: () => closeWindow('degenvault'),
+        },
+      ],
+    },
+    {
+      name: 'Account',
+      items: [
+        {
+          label: isConnected ? 'Manage Connected Wallet' : 'Connect Web3 Wallet',
+          shortcut: 'Ctrl+W',
+          onClick: openConnectModal,
+        },
+        {
+          label: 'Switch to Anonymous Guest',
+          disabled: !isConnected,
+          onClick: () => {
+            useAuthStore.getState().disconnectWallet();
+          },
+        },
+        { divider: true, label: '' },
+        {
+          label: 'Reset Sandbox to $10.00 USDT',
+          danger: true,
+          onClick: () => {
+            if (confirm('Reset entire sandbox ledger back to default 10.00 USDT starter pack?')) {
+              resetWallet(10.0);
+            }
+          },
+        },
+      ],
+    },
+    {
+      name: 'Rewards',
+      items: [
+        {
+          label: `Claim Daily Reward Streak (Day ${currentStreakDay})`,
+          disabled: !canClaim,
+          onClick: handleClaim,
+        },
+        {
+          label: 'Emergency Faucet (+10.00 USDT)',
+          disabled: !isFaucetAvailable,
+          onClick: handleFaucet,
+        },
+      ],
+    },
+    {
+      name: 'Security',
+      items: [
+        {
+          label: 'Cloud Sync Status (Supabase)',
+          onClick: () => {
+            alert(
+              `Cloud Sync Security:\n\n- Backend: Supabase PostgreSQL Realtime\n- Authenticated: ${
+                isConnected ? `Yes (${walletAddress})` : 'No (Guest Sandbox Mode)'
+              }\n- Encryption: SSL v3.0 / SIWE ECDSA secp256k1`
+            );
+          },
+        },
+        {
+          label: 'Cryptographic Identity Passport (SIWE)',
+          onClick: () => {
+            alert(
+              'About SIWE (Sign-In with Ethereum):\n\nCryptoOS 98 uses asymmetric cryptography for authentication. No password or email needed. 100% Zero Gas & Zero Real Cryptocurrency required.'
+            );
+          },
+        },
+      ],
+    },
+    {
+      name: 'Help',
+      items: [
+        {
+          label: 'Open Setup & Onboarding Wizard',
+          onClick: () => {
+            openWindow('welcome');
+            focusWindow('welcome');
+          },
+        },
+        {
+          label: 'About DegenVault 98',
+          onClick: () => {
+            alert('DegenVault.exe v1.0\nVirtual Financial Ledger & Streak Rewards Manager\nCryptoOS 98');
+          },
+        },
+      ],
+    },
+  ];
+
   return (
     <WindowFrame
       id="degenvault"
-      menuItems={['File', 'Account', 'Rewards', 'Security', 'Help']}
+      menus={degenVaultMenus}
       statusContent={
         <>
           <div className="flex items-center space-x-2">
@@ -138,6 +273,27 @@ export const DegenVaultWindow: React.FC = () => {
       }
     >
       <div className="flex flex-col gap-2 p-1 text-black font-ui overflow-y-auto">
+        {/* Guest Sandbox Warning & Cloud Persistence Notice */}
+        {!isConnected && (
+          <div className="win-inset bg-[#FFF9D2] border border-[#B8860B] p-2 flex items-start space-x-2 text-black text-[10.5px]">
+            <span className="text-[16px] leading-none mt-0.5">⚠️</span>
+            <div className="flex-1 min-w-0">
+              <strong className="block text-titlebar-navy font-bold">
+                Akun ini adalah Akun Tamu (Guest Profile)
+              </strong>
+              <p className="text-[10px] text-[#333] leading-snug mt-0.5">
+                Progress saldo, streak login, dan riwayat trading disimpan di memori browser lokal dan <strong>tidak tersimpan otomatis ke Cloud</strong>. Hubungkan Web3 Wallet Anda untuk menyimpan progress secara permanen, membuka pendaftaran Leaderboard global, dan mengakses seluruh fitur game!
+              </p>
+            </div>
+            <button
+              onClick={openConnectModal}
+              className="win-btn bg-titlebar-navy text-white text-[10px] font-bold px-2.5 py-1 flex-shrink-0 active:translate-x-0.5 active:translate-y-0.5 shadow cursor-pointer"
+            >
+              Connect Wallet
+            </button>
+          </div>
+        )}
+
         {/* =================================================================== */}
         {/* SECTION 1: TRADER PROFILE & AVATAR RANK                             */}
         {/* =================================================================== */}
@@ -179,7 +335,7 @@ export const DegenVaultWindow: React.FC = () => {
                 )}
               </div>
               <div className="flex items-center space-x-2 font-mono text-[10px] text-[#333] font-semibold">
-                <span>Account: <strong className="text-black">{isConnected && walletAddress ? Web3AuthService.truncateAddress(walletAddress) : 'Local Guest (10 USDT)'}</strong></span>
+                <span>Account: <strong className="text-black">{isConnected && walletAddress ? Web3AuthService.truncateAddress(walletAddress) : 'Guest Profile (Local 10 USDT)'}</strong></span>
                 <span>•</span>
                 <button
                   onClick={openConnectModal}
@@ -217,14 +373,26 @@ export const DegenVaultWindow: React.FC = () => {
         {/* SECTION 2: VIRTUAL FINANCIAL LEDGER (INSET)                         */}
         {/* =================================================================== */}
         <div className="win-inset-deep p-2.5 text-white flex flex-col gap-2">
-          <div className="flex items-center justify-between border-b border-[#333] pb-1">
+          <div className="flex items-center justify-between border-b border-[#333] pb-1 flex-wrap gap-1">
             <div className="flex items-center space-x-1.5 text-crt-bullish">
               <PixelIcon name="wallet" size={14} />
               <span className="font-headline font-bold text-[12px] uppercase tracking-wider">
                 Virtual Financial Ledger
               </span>
             </div>
-            <span className="font-mono text-[10px] text-[#888]">[PORTFOLIO_ID: DEGEN_0x98]</span>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={handleRefreshBalance}
+                className="win-btn text-[9.5px] font-bold px-2 py-0.5 flex items-center gap-1 active:translate-x-0.5 active:translate-y-0.5 bg-win-base text-black cursor-pointer shadow"
+                title="Recalculate equity based on live position unrealized PnL"
+              >
+                <span className={isRefreshing ? 'animate-spin' : ''}>⟳</span>
+                <span>Refresh Balance</span>
+              </button>
+              <span className="font-mono text-[9px] text-[#888]">
+                {lastRefreshedTime ? `SYNCED ${lastRefreshedTime}` : '[PORTFOLIO_ID: DEGEN_0x98]'}
+              </span>
+            </div>
           </div>
 
           {/* Top 3 Metrics Cards */}
@@ -253,6 +421,19 @@ export const DegenVaultWindow: React.FC = () => {
               <span className="block font-mono text-[9px] text-crt-amber font-semibold">Active Positions</span>
             </div>
           </div>
+
+          {/* Active Positions Live Sync Status Indicator */}
+          {positions.length > 0 && (
+            <div className="bg-[#181818] px-2 py-1 border border-[#333] flex items-center justify-between font-mono text-[9.5px]">
+              <div className="flex items-center space-x-1.5 text-crt-amber">
+                <span className="text-[10px]">⚡</span>
+                <span className="font-bold">LIVE POSITION SYNC ({positions.length} ACTIVE):</span>
+              </div>
+              <span className={`font-bold ${totalUnrealizedPnl >= 0 ? 'text-crt-bullish' : 'text-crt-bearish'}`}>
+                Unrealized PnL: {totalUnrealizedPnl >= 0 ? '+' : ''}${totalUnrealizedPnl.toFixed(2)} USDT
+              </span>
+            </div>
+          )}
 
           {/* Performance Breakdown Row */}
           <div className="grid grid-cols-3 gap-2 pt-1 border-t border-[#333] font-mono text-[10px]">

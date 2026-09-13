@@ -3,10 +3,27 @@ import { WindowId } from '@/types/window';
 import { useWindowStore } from '@/stores/useWindowStore';
 import { PixelIcon } from '@/components/common/PixelIcon';
 
-interface WindowFrameProps {
+import { soundFXService } from '@/services/SoundFXService';
+
+export interface WindowMenuAction {
+  label: string;
+  shortcut?: string;
+  disabled?: boolean;
+  danger?: boolean;
+  divider?: boolean;
+  onClick?: () => void;
+}
+
+export interface WindowMenuCategory {
+  name: string;
+  items: WindowMenuAction[];
+}
+
+export interface WindowFrameProps {
   id: WindowId;
   children: React.ReactNode;
   menuItems?: string[];
+  menus?: WindowMenuCategory[];
   statusContent?: React.ReactNode;
   hasHelp?: boolean;
 }
@@ -15,6 +32,7 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
   id,
   children,
   menuItems = ['File', 'Edit', 'View', 'Options', 'Help'],
+  menus,
   statusContent,
   hasHelp = true,
 }) => {
@@ -94,6 +112,29 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
       }
     }
   };
+
+  const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
+  const menuBarRef = useRef<HTMLElement>(null);
+
+  // Close menus on outside click or Esc
+  useEffect(() => {
+    const handleDocumentClick = (e: MouseEvent) => {
+      if (menuBarRef.current && !menuBarRef.current.contains(e.target as Node)) {
+        setOpenMenuIndex(null);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpenMenuIndex(null);
+      }
+    };
+    document.addEventListener('mousedown', handleDocumentClick);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleDocumentClick);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   // Prevent background drag leaking
   useEffect(() => {
@@ -204,20 +245,102 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
         </div>
       </div>
 
-      {/* Classic Menu Bar (File, Edit, View...) */}
-      {menuItems && menuItems.length > 0 && (
-        <nav className="h-menubar-height bg-win-base border-b border-bevel-shadow flex items-center px-1 space-x-1 text-black text-[11px] font-ui">
-          {menuItems.map((item, idx) => (
-            <button
-              key={idx}
-              className="px-1.5 py-0.5 text-black hover:bg-titlebar-navy hover:text-white transition-none cursor-pointer"
-            >
-              <span className="underline">{item.slice(0, 1)}</span>
-              {item.slice(1)}
-            </button>
-          ))}
-        </nav>
-      )}
+      {/* Classic Menu Bar with Functional Dropdowns */}
+      {(() => {
+        const effectiveMenus: WindowMenuCategory[] = menus && menus.length > 0
+          ? menus
+          : (menuItems || []).map((name) => ({
+              name,
+              items: [
+                {
+                  label: `${name} Action (Default)`,
+                  onClick: () => alert(`${name} clicked in ${windowState?.title}`),
+                },
+              ],
+            }));
+
+        if (effectiveMenus.length === 0) return null;
+
+        return (
+          <nav
+            ref={menuBarRef}
+            className="relative h-menubar-height bg-win-base border-b border-bevel-shadow flex items-center px-1 space-x-1 text-black text-[11px] font-ui select-none z-30 flex-shrink-0"
+          >
+            {effectiveMenus.map((category, catIdx) => {
+              const isOpen = openMenuIndex === catIdx;
+              return (
+                <div key={catIdx} className="relative">
+                  <button
+                    onClick={() => {
+                      soundFXService.playKeyClick();
+                      setOpenMenuIndex(isOpen ? null : catIdx);
+                    }}
+                    onMouseEnter={() => {
+                      if (openMenuIndex !== null && openMenuIndex !== catIdx) {
+                        soundFXService.playKeyClick();
+                        setOpenMenuIndex(catIdx);
+                      }
+                    }}
+                    className={`px-1.5 py-0.5 transition-none cursor-pointer ${
+                      isOpen
+                        ? 'bg-titlebar-navy text-white font-semibold'
+                        : 'text-black hover:bg-titlebar-navy hover:text-white'
+                    }`}
+                  >
+                    <span className="underline">{category.name.slice(0, 1)}</span>
+                    {category.name.slice(1)}
+                  </button>
+
+                  {/* Dropdown Popup */}
+                  {isOpen && (
+                    <div
+                      className="absolute top-full left-0 min-w-[190px] window-outer-frame bg-win-base p-0.5 shadow-2xl z-50 flex flex-col font-ui text-[11px] border border-bevel-dark"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {category.items.map((action, actionIdx) => {
+                        if (action.divider) {
+                          return (
+                            <div
+                              key={actionIdx}
+                              className="h-[1px] bg-bevel-shadow my-1 border-b border-bevel-highlight"
+                            />
+                          );
+                        }
+                        return (
+                          <button
+                            key={actionIdx}
+                            disabled={action.disabled}
+                            onClick={() => {
+                              if (action.disabled) return;
+                              soundFXService.playKeyClick();
+                              setOpenMenuIndex(null);
+                              action.onClick?.();
+                            }}
+                            className={`w-full px-2 py-1 flex items-center justify-between text-left transition-none ${
+                              action.disabled
+                                ? 'text-[#888] cursor-not-allowed opacity-60'
+                                : action.danger
+                                ? 'text-error hover:bg-error hover:text-white cursor-pointer font-semibold'
+                                : 'text-black hover:bg-titlebar-navy hover:text-white cursor-pointer'
+                            }`}
+                          >
+                            <span>{action.label}</span>
+                            {action.shortcut && (
+                              <span className="text-[9px] font-mono opacity-70 ml-3">
+                                {action.shortcut}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </nav>
+        );
+      })()}
 
       {/* Main Window Content Viewport */}
       <div className="flex-1 bg-win-base p-1 overflow-auto relative flex flex-col">

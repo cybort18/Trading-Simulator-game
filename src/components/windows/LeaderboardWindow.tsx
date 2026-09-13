@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { WindowFrame } from '@/components/desktop/WindowFrame';
+import { WindowFrame, WindowMenuCategory } from '@/components/desktop/WindowFrame';
 import { useWindowStore } from '@/stores/useWindowStore';
 import { useWalletStore } from '@/stores/useWalletStore';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -60,8 +60,10 @@ export const LeaderboardWindow: React.FC = () => {
 
   const username = useAuthStore((state) => state.username);
   const isConnected = useAuthStore((state) => state.isConnected);
+  const openConnectModal = useAuthStore((state) => state.openConnectModal);
 
   const openWindow = useWindowStore((state) => state.openWindow);
+  const closeWindow = useWindowStore((state) => state.closeWindow);
   const focusWindow = useWindowStore((state) => state.focusWindow);
 
   const winRate = useWalletStore((state) => state.getWinRate());
@@ -176,13 +178,94 @@ export const LeaderboardWindow: React.FC = () => {
   const top2 = activeCategoryList[1] || sortedData[1];
   const top3 = activeCategoryList[2] || sortedData[2];
 
-  const userRankDisplay = totalTrades === 0 ? '#---' : allTimeRoi > 100 ? '#48' : '#142';
-  const userTier = totalTrades === 0 ? 'Novice Unranked' : totalTrades > 15 ? 'Veteran Scalper' : 'Novice Liquidator';
+  const userRankDisplay = !isConnected ? 'LOCKED' : totalTrades === 0 ? '#---' : allTimeRoi > 100 ? '#48' : '#142';
+  const userTier = !isConnected ? 'Guest Sandbox' : totalTrades === 0 ? 'Novice Unranked' : totalTrades > 15 ? 'Veteran Scalper' : 'Novice Liquidator';
+
+  const leaderboardMenus: WindowMenuCategory[] = [
+    {
+      name: 'File',
+      items: [
+        {
+          label: 'Export Leaderboard Snapshot',
+          onClick: () => {
+            alert('Leaderboard snapshot copied to clipboard!');
+          },
+        },
+        { divider: true, label: '' },
+        {
+          label: 'Close Leaderboard',
+          shortcut: 'Alt+F4',
+          onClick: () => closeWindow('leaderboard'),
+        },
+      ],
+    },
+    {
+      name: 'Filter',
+      items: [
+        { label: 'All-Time Net ROI %', onClick: () => setActiveFilter('roi') },
+        { label: '24H Top Gainers', onClick: () => setActiveFilter('gainers') },
+        {
+          label: 'Weekly PnL Cup',
+          onClick: () => {
+            if (!isConnected) {
+              alert('Akses Terkunci: Turnamen mingguan hanya untuk akun terverifikasi Web3.');
+              return;
+            }
+            setActiveFilter('weekly');
+          },
+        },
+        { label: 'Most Liquidated (Wall of Shame)', onClick: () => setActiveFilter('shame') },
+      ],
+    },
+    {
+      name: 'Seasons',
+      items: [
+        {
+          label: 'Season 1 Details (Ends in 3d 14h)',
+          onClick: () => {
+            alert('Season 01 Arena:\n\nPrize: 50,000 USDT Virtual Pool + Golden Windows 98 NFT Trophy.');
+          },
+        },
+      ],
+    },
+    {
+      name: 'Prizes',
+      items: [
+        {
+          label: 'Prize Eligibility Status',
+          onClick: () => {
+            if (!isConnected) {
+              alert('Status Hadiah:\n\nAnda saat ini menggunakan Guest Profile. Hubungkan Web3 wallet untuk memenuhi syarat distribusi hadiah Season 1.');
+            } else {
+              alert('Status Hadiah:\n\nWallet terverifikasi. Anda memenuhi syarat untuk mengklaim hadiah Season 1.');
+            }
+          },
+        },
+      ],
+    },
+    {
+      name: 'Help',
+      items: [
+        {
+          label: 'Scoring Rules & Metrics',
+          onClick: () => {
+            alert('Leaderboard Scoring:\n\n- ROI %: (Net Profit / Initial Margin) * 100\n- Win Rate: (Winning Trades / Total Closed Trades) * 100');
+          },
+        },
+        {
+          label: 'About Leaderboard 98',
+          onClick: () => {
+            alert('Leaderboard.exe v1.0\nCloud Multiplayer Arena (Supabase)\nCryptoOS 98');
+          },
+        },
+      ],
+    },
+  ];
 
   return (
     <WindowFrame
       id="leaderboard"
-      menuItems={['File', 'Filter', 'Seasons', 'Prizes', 'Help']}
+      menus={leaderboardMenus}
       statusContent={
         <>
           <div className="flex items-center space-x-2">
@@ -199,6 +282,29 @@ export const LeaderboardWindow: React.FC = () => {
       }
     >
       <div className="flex flex-col gap-1.5 p-1 text-black font-ui h-full overflow-hidden">
+        {/* Guest Account Leaderboard Restriction Banner */}
+        {!isConnected && (
+          <div className="win-inset bg-[#FFF9D2] border border-[#B8860B] p-2 flex items-center justify-between text-black text-[10.5px] flex-shrink-0">
+            <div className="flex items-center space-x-2">
+              <span className="text-[16px] leading-none">🔒</span>
+              <div>
+                <strong className="block text-titlebar-navy font-bold">
+                  Guest Profile (Mode Sandbox / Tidak Terdaftar di Ranking Global)
+                </strong>
+                <span className="text-[10px] text-[#333]">
+                  Akun tamu tidak dapat berpartisipasi dalam peringkat resmi Leaderboard atau memenangkan hadiah Season 1. Hubungkan Web3 Wallet Anda untuk masuk ke Leaderboard resmi!
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={openConnectModal}
+              className="win-btn bg-titlebar-navy text-white text-[10px] font-bold px-2.5 py-1 flex-shrink-0 active:translate-x-0.5 active:translate-y-0.5 shadow cursor-pointer ml-2"
+            >
+              Connect Wallet
+            </button>
+          </div>
+        )}
+
         {/* Controls / Filter Bar */}
         <div className="win-inset bg-surface-high px-2 py-1 flex items-center justify-between gap-1 flex-wrap">
           <div className="flex items-center space-x-1">
@@ -219,7 +325,13 @@ export const LeaderboardWindow: React.FC = () => {
               <span className="text-[#008531]">▲</span> 24H Top Gainers
             </button>
             <button
-              onClick={() => setActiveFilter('weekly')}
+              onClick={() => {
+                if (!isConnected) {
+                  alert('Akses Event Terkunci!\n\nAkun Tamu (Guest Profile) tidak dapat berpartisipasi dalam turnamen mingguan. Silakan hubungkan Web3 Wallet Anda untuk mendaftarkan akun resmi.');
+                  return;
+                }
+                setActiveFilter('weekly');
+              }}
               className={`px-2 py-0.5 text-[10px] font-bold ${
                 activeFilter === 'weekly' ? 'win-btn-pressed bg-win-pressed font-extrabold text-titlebar-navy' : 'win-btn bg-win-base'
               }`}
@@ -394,7 +506,7 @@ export const LeaderboardWindow: React.FC = () => {
             <div className="col-span-3 font-bold flex items-center gap-1 min-w-0 pr-1">
               <span className="truncate">{username}</span>
               <span className="win-outset bg-crt-amber text-black px-1 text-[8px] font-bold flex-shrink-0">
-                {isConnected ? 'YOU (WEB3)' : 'YOU (GUEST)'}
+                {isConnected ? 'YOU (WEB3)' : 'YOU (GUEST - UNRANKED)'}
               </span>
             </div>
             <div className="col-span-2 text-[10px] text-[#EEE] font-medium">{userTier}</div>

@@ -17,7 +17,7 @@ export const WelcomeModal: React.FC = () => {
   const openConnectModal = useAuthStore((state) => state.openConnectModal);
 
   const [currentStep, setCurrentStep] = useState<number>(1);
-  const [dontShowAgain, setDontShowAgain] = useState<boolean>(true);
+  const [dontShowAgain, setDontShowAgain] = useState<boolean>(false);
   const [targetApp, setTargetApp] = useState<'turbotrade' | 'degenvault' | 'clean'>('turbotrade');
 
   if (!windowState || !windowState.isOpen) {

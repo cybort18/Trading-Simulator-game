@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { WindowFrame } from '@/components/desktop/WindowFrame';
+import { WindowFrame, WindowMenuCategory } from '@/components/desktop/WindowFrame';
 import { PixelIcon } from '@/components/common/PixelIcon';
 import { useMarketDataStore } from '@/stores/useMarketDataStore';
 import { useTradingStore } from '@/stores/useTradingStore';
@@ -114,10 +114,175 @@ export const TurboTradeWindow: React.FC = () => {
     SOLUSDT: 'SOL/USDT',
   };
 
+  const turboTradeMenus: WindowMenuCategory[] = [
+    {
+      name: 'File',
+      items: [
+        {
+          label: 'Reset Window Bounds',
+          onClick: () => {
+            useWindowStore.getState().updatePosition('turbotrade', { x: 60, y: 15 });
+            useWindowStore.getState().updateSize('turbotrade', { width: 920, height: 600 });
+          },
+        },
+        { divider: true, label: '' },
+        {
+          label: 'Close Terminal',
+          shortcut: 'Alt+F4',
+          onClick: () => useWindowStore.getState().closeWindow('turbotrade'),
+        },
+      ],
+    },
+    {
+      name: 'Market',
+      items: [
+        {
+          label: 'BTC/USDT [Perpetual 50x]',
+          shortcut: '1',
+          onClick: () => setSelectedPair('BTCUSDT'),
+        },
+        {
+          label: 'ETH/USDT [Perpetual 50x]',
+          shortcut: '2',
+          onClick: () => setSelectedPair('ETHUSDT'),
+        },
+        {
+          label: 'SOL/USDT [Perpetual 50x]',
+          shortcut: '3',
+          onClick: () => setSelectedPair('SOLUSDT'),
+        },
+      ],
+    },
+    {
+      name: 'View',
+      items: [
+        { label: 'Timeframe: 1m (Realtime)', onClick: () => setTimeframe('1m') },
+        { label: 'Timeframe: 5m', onClick: () => setTimeframe('5m') },
+        { label: 'Timeframe: 15m', onClick: () => setTimeframe('15m') },
+        { label: 'Timeframe: 1h', onClick: () => setTimeframe('1h') },
+        { label: 'Timeframe: 1D', onClick: () => setTimeframe('1D') },
+        { divider: true, label: '' },
+        {
+          label: 'Audio Sound FX Active',
+          onClick: () => {
+            soundFXService.playKeyClick();
+            alert('Procedural Retro Web Audio: Operational');
+          },
+        },
+      ],
+    },
+    {
+      name: 'Order',
+      items: [
+        {
+          label: 'Quick Market Long (20x)',
+          onClick: () => {
+            const margin = 5;
+            openPosition(
+              {
+                pair: selectedPair,
+                direction: 'LONG',
+                marginMode: 'ISOLATED',
+                leverage: 20,
+                margin,
+                type: 'MARKET',
+              },
+              currentPrice
+            );
+            soundFXService.playOrderExecuted();
+          },
+        },
+        {
+          label: 'Quick Market Short (20x)',
+          onClick: () => {
+            const margin = 5;
+            openPosition(
+              {
+                pair: selectedPair,
+                direction: 'SHORT',
+                marginMode: 'ISOLATED',
+                leverage: 20,
+                margin,
+                type: 'MARKET',
+              },
+              currentPrice
+            );
+            soundFXService.playOrderExecuted();
+          },
+        },
+        { divider: true, label: '' },
+        {
+          label: 'Emergency Close All Positions',
+          danger: true,
+          disabled: positions.length === 0,
+          onClick: () => {
+            positions.forEach((pos) => {
+              const mark = prices[pos.pair] || pos.entryPrice;
+              closePosition(pos.id, mark);
+            });
+            soundFXService.playOrderExecuted();
+          },
+        },
+      ],
+    },
+    {
+      name: 'Tools',
+      items: [
+        {
+          label: 'Open DegenVault (Wallet)',
+          onClick: () => {
+            openWindow('degenvault');
+            focusWindow('degenvault');
+          },
+        },
+        {
+          label: 'Open Leaderboard.exe',
+          onClick: () => {
+            openWindow('leaderboard');
+            focusWindow('leaderboard');
+          },
+        },
+        {
+          label: 'Open Share Flex Card',
+          onClick: () => {
+            openWindow('flexcard');
+            focusWindow('flexcard');
+          },
+        },
+      ],
+    },
+    {
+      name: 'Help',
+      items: [
+        {
+          label: 'System Setup Wizard',
+          onClick: () => {
+            openWindow('welcome');
+            focusWindow('welcome');
+          },
+        },
+        {
+          label: 'Futures Trading Guidelines',
+          onClick: () => {
+            alert(
+              'TurboTrade Guidelines:\n\n1. Long (Buy): Anticipates price increase.\n2. Short (Sell): Anticipates price decline.\n3. Liquidation: Watch liquidation price buffer closely.\n4. Simulated Balance: 100% risk-free.'
+            );
+          },
+        },
+        {
+          label: 'About TurboTrade.exe',
+          onClick: () => {
+            alert('TurboTrade.exe v1.0\nHigh-Leverage Futures Trading Terminal\nCryptoOS 98');
+          },
+        },
+      ],
+    },
+  ];
+
   return (
     <WindowFrame
       id="turbotrade"
-      menuItems={['File', 'Market', 'View', 'Order', 'Tools', 'Help']}
+      menus={turboTradeMenus}
       statusContent={
         <>
           <div className="flex items-center space-x-2">

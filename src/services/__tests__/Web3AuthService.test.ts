@@ -61,7 +61,7 @@ describe('Web3AuthService & SIWE Authentication', () => {
     expect(state.isGuest).toBe(true);
     expect(state.isConnected).toBe(false);
     expect(state.walletAddress).toBeNull();
-    expect(state.username).toBe('Guest_Degen');
+    expect(state.username).toBe('Guest Profile');
     expect(state.rankTier).toBe('Novice Liquidator');
   });
 
@@ -82,7 +82,7 @@ describe('Web3AuthService & SIWE Authentication', () => {
     expect(afterDisconnect.isGuest).toBe(true);
     expect(afterDisconnect.isConnected).toBe(false);
     expect(afterDisconnect.walletAddress).toBeNull();
-    expect(afterDisconnect.username).toBe('Guest_Degen');
+    expect(afterDisconnect.username).toBe('Guest Profile');
   });
 
   it('toggles connect wallet modal open and close states', () => {
