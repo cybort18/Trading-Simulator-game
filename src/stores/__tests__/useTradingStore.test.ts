@@ -180,4 +180,60 @@ describe('useTradingStore', () => {
     useTradingStore.getState().setSelectedFlexTrade(null);
     expect(useTradingStore.getState().selectedFlexTrade).toBeNull();
   });
+
+  it('correctly sets, updates, and clears TP and SL targets on active positions', () => {
+    const res = useTradingStore.getState().openPosition(
+      {
+        pair: 'BTCUSDT',
+        direction: 'LONG',
+        leverage: 20,
+        margin: 5.00,
+        type: 'LIMIT',
+        limitPrice: 60000.0,
+        tpPrice: 63000.0,
+        slPrice: 58500.0,
+      },
+      60000.0
+    );
+
+    expect(res.success).toBe(true);
+    const pos = useTradingStore.getState().positions[0];
+    expect(pos.tpPrice).toBe(63000.0);
+    expect(pos.slPrice).toBe(58500.0);
+
+    // Update TP & SL dynamically
+    useTradingStore.getState().setTpSl(pos.id, 65000.0, 59000.0);
+    const updated = useTradingStore.getState().positions[0];
+    expect(updated.tpPrice).toBe(65000.0);
+    expect(updated.slPrice).toBe(59000.0);
+
+    // Clear TP & SL
+    useTradingStore.getState().setTpSl(pos.id, undefined, undefined);
+    const cleared = useTradingStore.getState().positions[0];
+    expect(cleared.tpPrice).toBeUndefined();
+    expect(cleared.slPrice).toBeUndefined();
+  });
+
+  it('records TAKE_PROFIT close reason in trade history when closed with profit target', () => {
+    useTradingStore.getState().openPosition(
+      {
+        pair: 'ETHUSDT',
+        direction: 'LONG',
+        leverage: 10,
+        margin: 5.00,
+        type: 'LIMIT',
+        limitPrice: 3000.0,
+        tpPrice: 3300.0,
+      },
+      3000.0
+    );
+
+    const pos = useTradingStore.getState().positions[0];
+    const res = useTradingStore.getState().closePosition(pos.id, 3300.0, 'TAKE_PROFIT');
+
+    expect(res.success).toBe(true);
+    expect(useTradingStore.getState().positions.length).toBe(0);
+    expect(useTradingStore.getState().tradeHistory[0].closeReason).toBe('TAKE_PROFIT');
+    expect(useTradingStore.getState().tradeHistory[0].realizedPnl).toBeGreaterThan(0);
+  });
 });

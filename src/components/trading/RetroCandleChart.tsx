@@ -8,9 +8,12 @@ import {
   IChartApi,
   ISeriesApi,
   Time,
+  IPriceLine,
+  LineStyle,
 } from 'lightweight-charts';
 import { TradingPair } from '@/types/market';
 import { useMarketDataStore } from '@/stores/useMarketDataStore';
+import { useTradingStore } from '@/stores/useTradingStore';
 import { BinanceWsService } from '@/services/BinanceWsService';
 
 interface RetroCandleChartProps {
@@ -22,11 +25,14 @@ export const RetroCandleChart: React.FC<RetroCandleChartProps> = ({ pair, timefr
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
+  const priceLinesRef = useRef<IPriceLine[]>([]);
   const lastCandleTimeRef = useRef<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Latest candle update from WebSocket store
   const latestCandle = useMarketDataStore((state) => state.latestCandles[pair]);
+  // Open positions from TradingStore to visualize entry, liq, and TP
+  const positions = useTradingStore((state) => state.positions);
 
   // Initialize and hydrate chart on mount or pair/timeframe change
   useEffect(() => {
@@ -125,6 +131,7 @@ export const RetroCandleChart: React.FC<RetroCandleChartProps> = ({ pair, timefr
     return () => {
       isCancelled = true;
       resizeObserver.disconnect();
+      priceLinesRef.current = [];
       if (seriesRef.current) {
         try {
           seriesRef.current.setData([]);
@@ -138,6 +145,105 @@ export const RetroCandleChart: React.FC<RetroCandleChartProps> = ({ pair, timefr
       lastCandleTimeRef.current = null;
     };
   }, [pair, timeframe]);
+
+  // Synchronize active position lines (Entry, Liq, TP, SL) with the candlestick series
+  useEffect(() => {
+    const series = seriesRef.current;
+    if (!series || isLoading) return;
+
+    // Remove existing price lines
+    priceLinesRef.current.forEach((line) => {
+      try {
+        series.removePriceLine(line);
+      } catch {
+        // Safe catch
+      }
+    });
+    priceLinesRef.current = [];
+
+    // Filter positions for this chart's pair
+    const activePositions = positions.filter((p) => p.pair === pair);
+
+    activePositions.forEach((pos) => {
+      // 1. Entry Price Line
+      try {
+        const isLong = pos.direction === 'LONG';
+        const entryLine = series.createPriceLine({
+          price: pos.entryPrice,
+          color: isLong ? '#00E5FF' : '#FFB703',
+          lineWidth: 1,
+          lineStyle: LineStyle.Solid,
+          axisLabelVisible: true,
+          title: `ENTRY [${pos.direction} ${pos.leverage}x]`,
+        });
+        priceLinesRef.current.push(entryLine);
+      } catch (err) {
+        console.warn('Failed to add entry price line:', err);
+      }
+
+      // 2. Estimated Liquidation Line
+      if (pos.liquidationPrice > 0) {
+        try {
+          const liqLine = series.createPriceLine({
+            price: pos.liquidationPrice,
+            color: '#FF3333',
+            lineWidth: 1,
+            lineStyle: LineStyle.Dashed,
+            axisLabelVisible: true,
+            title: `EST. LIQ`,
+          });
+          priceLinesRef.current.push(liqLine);
+        } catch (err) {
+          console.warn('Failed to add liq price line:', err);
+        }
+      }
+
+      // 3. Take Profit (TP) Line
+      if (pos.tpPrice && pos.tpPrice > 0) {
+        try {
+          const tpLine = series.createPriceLine({
+            price: pos.tpPrice,
+            color: '#00FF66',
+            lineWidth: 2,
+            lineStyle: LineStyle.Dashed,
+            axisLabelVisible: true,
+            title: `TP TARGET`,
+          });
+          priceLinesRef.current.push(tpLine);
+        } catch (err) {
+          console.warn('Failed to add TP price line:', err);
+        }
+      }
+
+      // 4. Stop Loss (SL) Line
+      if (pos.slPrice && pos.slPrice > 0) {
+        try {
+          const slLine = series.createPriceLine({
+            price: pos.slPrice,
+            color: '#FF5500',
+            lineWidth: 2,
+            lineStyle: LineStyle.Dotted,
+            axisLabelVisible: true,
+            title: `STOP LOSS`,
+          });
+          priceLinesRef.current.push(slLine);
+        } catch (err) {
+          console.warn('Failed to add SL price line:', err);
+        }
+      }
+    });
+
+    return () => {
+      if (seriesRef.current) {
+        priceLinesRef.current.forEach((line) => {
+          try {
+            seriesRef.current?.removePriceLine(line);
+          } catch {}
+        });
+      }
+      priceLinesRef.current = [];
+    };
+  }, [positions, pair, isLoading]);
 
   // Real-time incremental candle update from WebSocket
   useEffect(() => {

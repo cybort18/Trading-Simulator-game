@@ -7,16 +7,32 @@ import { Position } from '@/types/trading';
 import { evaluateCrossMarginPortfolio } from '@/utils/simulationMath';
 import { soundFXService } from '@/services/SoundFXService';
 
+export interface TpSlTriggerEvent {
+  position: Position;
+  reason: 'TAKE_PROFIT' | 'STOP_LOSS';
+  triggerPrice: number;
+  realizedPnl?: number;
+}
+
 export class LiquidationEngineService {
   private isRunning: boolean = false;
   private unsubscribeMarket: (() => void) | null = null;
   private onLiquidationCallback?: (liquidatedPositions: Position[]) => void;
+  private onTpSlCallbacks: Set<(event: TpSlTriggerEvent) => void> = new Set();
 
   // Throttle control for React UI updates during high-frequency WS tick storms
   private lastUiUpdateTime: number = 0;
   private throttleIntervalMs: number = 100; // Cap UI re-renders to max ~10 FPS
   private pendingPriceMap: Record<string, number> = {};
   private flushTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * Subscribe to TP/SL automated execution events
+   */
+  public subscribeTpSlTrigger(cb: (event: TpSlTriggerEvent) => void): () => void {
+    this.onTpSlCallbacks.add(cb);
+    return () => this.onTpSlCallbacks.delete(cb);
+  }
 
   /**
    * Start reactive high-frequency scanner loop
@@ -54,7 +70,7 @@ export class LiquidationEngineService {
 
   /**
    * High-frequency tick handler:
-   * - Performs ZERO-DELAY instant liquidation check
+   * - Performs ZERO-DELAY instant liquidation & TP/SL check
    * - Throttles React state dispatching to avoid frame drops during tick storms
    */
   public handleTick(tickers: Record<TradingPair, { price: number } | undefined>): void {
@@ -69,11 +85,12 @@ export class LiquidationEngineService {
       }
     }
 
-    // 2. Immediate zero-delay liquidation scan
+    // 2. Immediate zero-delay liquidation & TP/SL scan
     const liquidatedIds = this.scanLiquidationBreaches(priceMap);
+    const tpSlIds = this.scanTakeProfitAndStopLoss(priceMap);
 
-    // 3. Throttle React store UI PnL update (unless liquidation occurred, in which case flush immediately)
-    if (liquidatedIds.length > 0 || now - this.lastUiUpdateTime >= this.throttleIntervalMs) {
+    // 3. Throttle React store UI PnL update (unless an execution occurred, in which case flush immediately)
+    if (liquidatedIds.length > 0 || tpSlIds.length > 0 || now - this.lastUiUpdateTime >= this.throttleIntervalMs) {
       this.flushUiUpdate();
     } else if (!this.flushTimeout) {
       this.flushTimeout = setTimeout(() => {
@@ -112,7 +129,72 @@ export class LiquidationEngineService {
     // Update store immediately in synchronous evaluateTicks
     useTradingStore.getState().updatePricesAndPnL(priceMap);
 
-    return this.scanLiquidationBreaches(priceMap);
+    const liquidatedIds = this.scanLiquidationBreaches(priceMap);
+    this.scanTakeProfitAndStopLoss(priceMap);
+    return liquidatedIds;
+  }
+
+  /**
+   * Scan for Take Profit (TP) and Stop Loss (SL) triggers
+   */
+  public scanTakeProfitAndStopLoss(priceMap: Record<string, number>): string[] {
+    const tradingStore = useTradingStore.getState();
+    const positions = tradingStore.positions;
+    if (positions.length === 0) return [];
+
+    const closedIds: string[] = [];
+
+    for (const pos of positions) {
+      const currentPrice = priceMap[pos.pair];
+      if (!currentPrice || currentPrice <= 0) continue;
+
+      let isTp = false;
+      let isSl = false;
+
+      // Evaluate Take Profit
+      if (pos.tpPrice && pos.tpPrice > 0) {
+        if (pos.direction === 'LONG' && currentPrice >= pos.tpPrice) {
+          isTp = true;
+        } else if (pos.direction === 'SHORT' && currentPrice <= pos.tpPrice) {
+          isTp = true;
+        }
+      }
+
+      // Evaluate Stop Loss (only if TP not triggered)
+      if (!isTp && pos.slPrice && pos.slPrice > 0) {
+        if (pos.direction === 'LONG' && currentPrice <= pos.slPrice) {
+          isSl = true;
+        } else if (pos.direction === 'SHORT' && currentPrice >= pos.slPrice) {
+          isSl = true;
+        }
+      }
+
+      if (isTp) {
+        closedIds.push(pos.id);
+        const res = tradingStore.closePosition(pos.id, pos.tpPrice, 'TAKE_PROFIT');
+        soundFXService.playClaimReward();
+        const event: TpSlTriggerEvent = {
+          position: pos,
+          reason: 'TAKE_PROFIT',
+          triggerPrice: pos.tpPrice!,
+          realizedPnl: res.netRealizedPnl,
+        };
+        this.onTpSlCallbacks.forEach((cb) => cb(event));
+      } else if (isSl) {
+        closedIds.push(pos.id);
+        const res = tradingStore.closePosition(pos.id, pos.slPrice, 'STOP_LOSS');
+        soundFXService.playLeverageWarning();
+        const event: TpSlTriggerEvent = {
+          position: pos,
+          reason: 'STOP_LOSS',
+          triggerPrice: pos.slPrice!,
+          realizedPnl: res.netRealizedPnl,
+        };
+        this.onTpSlCallbacks.forEach((cb) => cb(event));
+      }
+    }
+
+    return closedIds;
   }
 
   /**

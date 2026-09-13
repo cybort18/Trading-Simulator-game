@@ -42,7 +42,8 @@ export interface TradingStoreState {
 
   // Actions
   openPosition: (params: OpenOrderParams, executionPrice?: number) => { success: boolean; error?: string; position?: Position };
-  closePosition: (positionId: string, exitPrice?: number) => { success: boolean; error?: string; netRealizedPnl?: number; roe?: number };
+  closePosition: (positionId: string, exitPrice?: number, closeReason?: 'MANUAL_CLOSE' | 'LIQUIDATED' | 'TAKE_PROFIT' | 'STOP_LOSS') => { success: boolean; error?: string; netRealizedPnl?: number; roe?: number };
+  setTpSl: (positionId: string, tpPrice?: number, slPrice?: number) => void;
   forceLiquidatePosition: (positionId: string, triggerPrice: number) => void;
   updatePricesAndPnL: (markPrices: Record<string, number>) => void;
   closeLiquidationModal: () => void;
@@ -80,6 +81,8 @@ export const useTradingStore = create<TradingStoreState>()(
           margin,
           type = 'MARKET',
           limitPrice,
+          tpPrice,
+          slPrice,
         } = params;
 
         if (
@@ -167,6 +170,8 @@ export const useTradingStore = create<TradingStoreState>()(
           liquidationPrice,
           unrealizedPnl: 0,
           roe: 0,
+          tpPrice: tpPrice && tpPrice > 0 ? roundToDecimals(tpPrice, 2) : undefined,
+          slPrice: slPrice && slPrice > 0 ? roundToDecimals(slPrice, 2) : undefined,
           createdAt: Date.now(),
         };
 
@@ -230,7 +235,11 @@ export const useTradingStore = create<TradingStoreState>()(
         return { success: true, position: newPosition };
       },
 
-      closePosition: (positionId: string, exitPrice?: number) => {
+      closePosition: (
+        positionId: string,
+        exitPrice?: number,
+        closeReason: 'MANUAL_CLOSE' | 'LIQUIDATED' | 'TAKE_PROFIT' | 'STOP_LOSS' = 'MANUAL_CLOSE'
+      ) => {
         const state = get();
         const position = state.positions.find((p) => p.id === positionId);
         if (!position) {
@@ -283,6 +292,7 @@ export const useTradingStore = create<TradingStoreState>()(
           roe,
           feesPaid: closingFee,
           status: 'CLOSED',
+          closeReason,
           openedAt: position.createdAt,
           closedAt: Date.now(),
         };
@@ -306,7 +316,7 @@ export const useTradingStore = create<TradingStoreState>()(
                     p_wallet_address: address,
                     p_position_id: position.id,
                     p_exit_price: actualExitPrice,
-                    p_close_reason: 'MANUAL_CLOSE',
+                    p_close_reason: closeReason,
                   });
 
                   if (error) {
@@ -333,6 +343,19 @@ export const useTradingStore = create<TradingStoreState>()(
         }
 
         return { success: true, netRealizedPnl, roe };
+      },
+
+      setTpSl: (positionId: string, tpPrice?: number, slPrice?: number) => {
+        set((state) => ({
+          positions: state.positions.map((p) => {
+            if (p.id !== positionId) return p;
+            return {
+              ...p,
+              tpPrice: tpPrice && tpPrice > 0 ? roundToDecimals(tpPrice, 2) : undefined,
+              slPrice: slPrice && slPrice > 0 ? roundToDecimals(slPrice, 2) : undefined,
+            };
+          }),
+        }));
       },
 
       forceLiquidatePosition: (positionId: string, triggerPrice: number) => {

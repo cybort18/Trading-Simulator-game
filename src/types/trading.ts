@@ -17,6 +17,8 @@ export interface Position {
   liquidationPrice: number;
   unrealizedPnl: number;
   roe: number;
+  tpPrice?: number;
+  slPrice?: number;
   createdAt: number;
 }
 
@@ -34,6 +36,7 @@ export interface TradeHistoryItem {
   roe: number;
   feesPaid: number;
   status: 'CLOSED' | 'LIQUIDATED';
+  closeReason?: 'MANUAL_CLOSE' | 'LIQUIDATED' | 'TAKE_PROFIT' | 'STOP_LOSS';
   openedAt: number;
   closedAt: number;
 }
@@ -46,4 +49,6 @@ export interface OpenOrderParams {
   margin: number;
   type?: OrderType;
   limitPrice?: number;
+  tpPrice?: number;
+  slPrice?: number;
 }

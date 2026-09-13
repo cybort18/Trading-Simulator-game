@@ -143,5 +143,100 @@ describe('LiquidationEngine', () => {
     expect(liquidated.length).toBe(2);
     expect(useTradingStore.getState().positions.length).toBe(0);
   });
+
+  it('automatically triggers Take Profit when price crosses target and realizes profit', () => {
+    // Open 20x Long on BTC at $60,000 with TP target at $63,000
+    const res = useTradingStore.getState().openPosition(
+      {
+        pair: 'BTCUSDT',
+        direction: 'LONG',
+        leverage: 20,
+        margin: 10.0,
+        type: 'LIMIT',
+        limitPrice: 60000.0,
+        tpPrice: 63000.0,
+      },
+      60000.0
+    );
+
+    expect(res.success).toBe(true);
+    const pos = res.position!;
+    expect(pos.tpPrice).toBe(63000.0);
+
+    let tpTriggered = false;
+    const unsub = liquidationEngine.subscribeTpSlTrigger((event) => {
+      if (event.reason === 'TAKE_PROFIT') {
+        tpTriggered = true;
+      }
+    });
+
+    // 1. Safe market price below TP: $61,500
+    let tickers: Record<TradingPair, { price: number }> = {
+      BTCUSDT: { price: 61500.0 },
+      ETHUSDT: { price: 3000.0 },
+      SOLUSDT: { price: 150.0 },
+    };
+    liquidationEngine.evaluateTicks(tickers);
+    expect(useTradingStore.getState().positions.length).toBe(1);
+    expect(tpTriggered).toBe(false);
+
+    // 2. Market price spikes to/above TP: $63,050
+    tickers = {
+      BTCUSDT: { price: 63050.0 },
+      ETHUSDT: { price: 3000.0 },
+      SOLUSDT: { price: 150.0 },
+    };
+    liquidationEngine.evaluateTicks(tickers);
+
+    expect(useTradingStore.getState().positions.length).toBe(0);
+    expect(tpTriggered).toBe(true);
+    expect(useTradingStore.getState().tradeHistory.length).toBe(1);
+    const trade = useTradingStore.getState().tradeHistory[0];
+    expect(trade.closeReason).toBe('TAKE_PROFIT');
+    expect(trade.realizedPnl).toBeGreaterThan(0);
+
+    unsub();
+  });
+
+  it('automatically triggers Stop Loss when price drops to stop loss target', () => {
+    // Open 20x Long on BTC at $60,000 with SL target at $58,500 (above liq price ~$57,315)
+    const res = useTradingStore.getState().openPosition(
+      {
+        pair: 'BTCUSDT',
+        direction: 'LONG',
+        leverage: 20,
+        margin: 10.0,
+        type: 'LIMIT',
+        limitPrice: 60000.0,
+        slPrice: 58500.0,
+      },
+      60000.0
+    );
+
+    expect(res.success).toBe(true);
+    expect(useTradingStore.getState().positions.length).toBe(1);
+
+    let slTriggered = false;
+    const unsub = liquidationEngine.subscribeTpSlTrigger((event) => {
+      if (event.reason === 'STOP_LOSS') {
+        slTriggered = true;
+      }
+    });
+
+    // Market price drops to $58,400 (breaches SL price before liquidation)
+    const tickers: Record<TradingPair, { price: number }> = {
+      BTCUSDT: { price: 58400.0 },
+      ETHUSDT: { price: 3000.0 },
+      SOLUSDT: { price: 150.0 },
+    };
+    liquidationEngine.evaluateTicks(tickers);
+
+    expect(useTradingStore.getState().positions.length).toBe(0);
+    expect(slTriggered).toBe(true);
+    expect(useTradingStore.getState().tradeHistory.length).toBe(1);
+    expect(useTradingStore.getState().tradeHistory[0].closeReason).toBe('STOP_LOSS');
+
+    unsub();
+  });
 });
 

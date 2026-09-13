@@ -11,11 +11,15 @@ import { RetroCandleChart } from '@/components/trading/RetroCandleChart';
 import {
   calculateLiquidationPrice,
   calculateQuantity,
+  calculateUnrealizedPnl,
+  calculateRoe,
   DEFAULT_MMR,
   DEFAULT_TAKER_FEE_RATE,
   MAINTENANCE_MARGIN_RATES,
 } from '@/utils/simulationMath';
 import { soundFXService } from '@/services/SoundFXService';
+import { liquidationEngine } from '@/services/LiquidationEngine';
+import { Position } from '@/types/trading';
 
 const LEVERAGE_SNAPS = [1, 5, 10, 20, 50, 100];
 
@@ -50,9 +54,41 @@ export const TurboTradeWindow: React.FC = () => {
 
   const [orderError, setOrderError] = useState<string | null>(null);
 
+  // TP / SL Modal state
+  const [tpSlModalPosition, setTpSlModalPosition] = useState<Position | null>(null);
+  const [modalTpPrice, setModalTpPrice] = useState<string>('');
+  const [modalSlPrice, setModalSlPrice] = useState<string>('');
+  const [tpSlError, setTpSlError] = useState<string | null>(null);
+
+  // Pre-trade TP / SL state
+  const [enablePreTradeTpSl, setEnablePreTradeTpSl] = useState<boolean>(false);
+  const [preTradeTp, setPreTradeTp] = useState<string>('');
+  const [preTradeSl, setPreTradeSl] = useState<string>('');
+
+  // Toast / banner notification for automated TP/SL executions
+  const [tpSlToast, setTpSlToast] = useState<{
+    message: string;
+    type: 'TAKE_PROFIT' | 'STOP_LOSS';
+  } | null>(null);
+
   const currentPrice = prices[selectedPair] || 64281.5;
   const currentTicker = tickers[selectedPair];
   const direction = priceDirections[selectedPair];
+
+  // Subscribe to automated Take Profit & Stop Loss triggers
+  useEffect(() => {
+    const unsubscribe = liquidationEngine.subscribeTpSlTrigger((event) => {
+      const isTp = event.reason === 'TAKE_PROFIT';
+      const msg = isTp
+        ? `[TAKE PROFIT HIT] ${event.position.pair} ${event.position.direction} at $${event.triggerPrice.toFixed(2)} (+${event.realizedPnl !== undefined ? event.realizedPnl.toFixed(2) : '0.00'} USDT)!`
+        : `[STOP LOSS HIT] ${event.position.pair} ${event.position.direction} at $${event.triggerPrice.toFixed(2)} (${event.realizedPnl !== undefined ? event.realizedPnl.toFixed(2) : '0.00'} USDT)`;
+      setTpSlToast({ message: msg, type: event.reason });
+      setTimeout(() => {
+        setTpSlToast(null);
+      }, 7000);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Keep limit price input in sync when pair changes if user hasn't typed custom price
   useEffect(() => {
@@ -419,6 +455,28 @@ export const TurboTradeWindow: React.FC = () => {
         <div className="flex-1 flex flex-col gap-1 min-w-0">
           {/* Chart Viewport & Toolbar */}
           <div className="flex-1 win-inset-deep p-1 flex flex-col min-h-[280px] relative overflow-hidden bg-[#121212]">
+            {/* Automated TP/SL Execution Toast */}
+            {tpSlToast && (
+              <div
+                className={`absolute top-9 left-2 right-2 z-30 p-1.5 border font-mono text-[10.5px] font-bold flex items-center justify-between shadow-lg ${
+                  tpSlToast.type === 'TAKE_PROFIT'
+                    ? 'bg-[#003311] text-[#00FF66] border-[#00FF66]'
+                    : 'bg-[#331100] text-[#FFAA00] border-[#FFAA00]'
+                }`}
+              >
+                <div className="flex items-center space-x-1.5">
+                  <span className="text-[12px]">{tpSlToast.type === 'TAKE_PROFIT' ? '🎯' : '🛡'}</span>
+                  <span>{tpSlToast.message}</span>
+                </div>
+                <button
+                  onClick={() => setTpSlToast(null)}
+                  className="win-btn text-[9px] px-1 py-0 font-bold text-black ml-2"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
             {/* Chart Toolbar */}
             <div className="flex items-center justify-between pb-1 border-b border-[#2A2A2A] text-[10px] text-white">
               <div className="flex items-center space-x-1">
@@ -508,6 +566,7 @@ export const TurboTradeWindow: React.FC = () => {
                         <th className="p-1">Entry</th>
                         <th className="p-1">Mark</th>
                         <th className="p-1">Liq Price</th>
+                        <th className="p-1">TP / SL</th>
                         <th className="p-1">Margin</th>
                         <th className="p-1">uPnL (ROE)</th>
                         <th className="p-1 text-right">Action</th>
@@ -535,12 +594,38 @@ export const TurboTradeWindow: React.FC = () => {
                             <td className="p-1 text-[#E0E0E0]">${pos.entryPrice.toFixed(2)}</td>
                             <td className="p-1 font-bold text-white">${mark.toFixed(2)}</td>
                             <td className="p-1 text-crt-amber font-bold">${pos.liquidationPrice.toFixed(2)}</td>
+                            <td className="p-1">
+                              <div className="flex flex-col gap-0.5 text-[8.5px]">
+                                {pos.tpPrice ? (
+                                  <span className="text-[#00FF66] font-bold">TP: ${pos.tpPrice.toFixed(2)}</span>
+                                ) : (
+                                  <span className="text-[#666]">TP: --</span>
+                                )}
+                                {pos.slPrice ? (
+                                  <span className="text-[#FF9900] font-bold">SL: ${pos.slPrice.toFixed(2)}</span>
+                                ) : (
+                                  <span className="text-[#666]">SL: --</span>
+                                )}
+                              </div>
+                            </td>
                             <td className="p-1 text-[#E0E0E0]">{pos.initialMargin.toFixed(2)} USDT</td>
                             <td className={`p-1 font-bold ${isBullish ? 'text-crt-bullish' : 'text-crt-bearish'}`}>
                               {isBullish ? '+' : ''}${pos.unrealizedPnl.toFixed(2)} ({isBullish ? '+' : ''}{pos.roe.toFixed(2)}%)
                             </td>
                             <td className="p-1 text-right">
                               <div className="flex items-center justify-end space-x-1">
+                                <button
+                                  onClick={() => {
+                                    setTpSlModalPosition(pos);
+                                    setModalTpPrice(pos.tpPrice ? pos.tpPrice.toFixed(2) : '');
+                                    setModalSlPrice(pos.slPrice ? pos.slPrice.toFixed(2) : '');
+                                    setTpSlError(null);
+                                  }}
+                                  className="win-btn text-[9px] px-1.5 py-0.5 text-black font-bold active:translate-x-0.5 active:translate-y-0.5 hover:bg-[#E0E0E0]"
+                                  title="Set Take Profit & Stop Loss Target"
+                                >
+                                  TP/SL
+                                </button>
                                 <button
                                   onClick={() => {
                                     setSelectedFlexTrade(pos);
@@ -826,6 +911,94 @@ export const TurboTradeWindow: React.FC = () => {
             </div>
           </div>
 
+          {/* Pre-trade Take Profit & Stop Loss (Optional) */}
+          <div className="win-inset bg-win-base p-1.5 flex flex-col gap-1 text-[10px]">
+            <div className="flex items-center justify-between">
+              <label className="flex items-center space-x-1.5 cursor-pointer font-bold text-black select-none">
+                <input
+                  type="checkbox"
+                  checked={enablePreTradeTpSl}
+                  onChange={(e) => setEnablePreTradeTpSl(e.target.checked)}
+                  className="w-3.5 h-3.5 accent-titlebar-navy cursor-pointer"
+                />
+                <span>Set TP / SL Targets</span>
+              </label>
+              {enablePreTradeTpSl && (
+                <span className="text-[8.5px] text-[#555] font-mono">[OPTIONAL]</span>
+              )}
+            </div>
+
+            {enablePreTradeTpSl && (
+              <div className="flex flex-col gap-1.5 pt-1 border-t border-[#BBB]">
+                {/* Pre-trade TP Input */}
+                <div>
+                  <div className="flex justify-between items-center text-[9px] text-black font-bold mb-0.5">
+                    <span className="text-[#008531]">Take Profit (TP):</span>
+                    <div className="flex space-x-1">
+                      {[25, 50, 100].map((roe) => (
+                        <button
+                          key={roe}
+                          type="button"
+                          onClick={() => {
+                            const target = effectiveEntryPrice * (1 + (roe / 100) / leverage);
+                            setPreTradeTp(target.toFixed(2));
+                          }}
+                          className="win-btn text-[8px] px-1 py-0 text-black font-bold"
+                        >
+                          +{roe}%
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="win-inset bg-white px-1.5 py-0.5 flex items-center">
+                    <span className="text-[#666] font-mono text-[10px] mr-1">$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder={effectiveEntryPrice ? (effectiveEntryPrice * 1.05).toFixed(2) : '0.00'}
+                      value={preTradeTp}
+                      onChange={(e) => setPreTradeTp(e.target.value)}
+                      className="w-full bg-transparent font-mono text-[11px] font-bold text-black border-none outline-none p-0"
+                    />
+                  </div>
+                </div>
+
+                {/* Pre-trade SL Input */}
+                <div>
+                  <div className="flex justify-between items-center text-[9px] text-black font-bold mb-0.5">
+                    <span className="text-[#BA1A1A]">Stop Loss (SL):</span>
+                    <div className="flex space-x-1">
+                      {[25, 50].map((roe) => (
+                        <button
+                          key={roe}
+                          type="button"
+                          onClick={() => {
+                            const target = effectiveEntryPrice * (1 - (roe / 100) / leverage);
+                            setPreTradeSl(target.toFixed(2));
+                          }}
+                          className="win-btn text-[8px] px-1 py-0 text-black font-bold"
+                        >
+                          -{roe}%
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="win-inset bg-white px-1.5 py-0.5 flex items-center">
+                    <span className="text-[#666] font-mono text-[10px] mr-1">$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder={effectiveEntryPrice ? (effectiveEntryPrice * 0.95).toFixed(2) : '0.00'}
+                      value={preTradeSl}
+                      onChange={(e) => setPreTradeSl(e.target.value)}
+                      className="w-full bg-transparent font-mono text-[11px] font-bold text-black border-none outline-none p-0"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Real-time Pre-trade Calculation Box */}
           <div className="win-inset-deep bg-[#121212] p-2 font-mono text-[9.5px] text-white flex flex-col gap-1">
             <div className="flex justify-between">
@@ -879,6 +1052,9 @@ export const TurboTradeWindow: React.FC = () => {
                   return;
                 }
 
+                const parsedTp = enablePreTradeTpSl && parseFloat(preTradeTp) > 0 ? parseFloat(preTradeTp) : undefined;
+                const parsedSl = enablePreTradeTpSl && parseFloat(preTradeSl) > 0 ? parseFloat(preTradeSl) : undefined;
+
                 setIsSubmitting(true);
                 try {
                   const res = openPosition(
@@ -890,6 +1066,8 @@ export const TurboTradeWindow: React.FC = () => {
                       margin,
                       type: orderType.toUpperCase() as 'MARKET' | 'LIMIT',
                       limitPrice: parsedLimit,
+                      tpPrice: parsedTp,
+                      slPrice: parsedSl,
                     },
                     orderType === 'limit' ? parsedLimit : currentPrice
                   );
@@ -928,6 +1106,9 @@ export const TurboTradeWindow: React.FC = () => {
                   return;
                 }
 
+                const parsedTp = enablePreTradeTpSl && parseFloat(preTradeTp) > 0 ? parseFloat(preTradeTp) : undefined;
+                const parsedSl = enablePreTradeTpSl && parseFloat(preTradeSl) > 0 ? parseFloat(preTradeSl) : undefined;
+
                 setIsSubmitting(true);
                 try {
                   const res = openPosition(
@@ -939,6 +1120,8 @@ export const TurboTradeWindow: React.FC = () => {
                       margin,
                       type: orderType.toUpperCase() as 'MARKET' | 'LIMIT',
                       limitPrice: parsedLimit,
+                      tpPrice: parsedTp,
+                      slPrice: parsedSl,
                     },
                     orderType === 'limit' ? parsedLimit : currentPrice
                   );
@@ -963,6 +1146,264 @@ export const TurboTradeWindow: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* =================================================================== */}
+      {/* WINDOWS 98 MODAL: Take Profit & Stop Loss Risk Management          */}
+      {/* =================================================================== */}
+      {tpSlModalPosition && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-2 font-mono">
+          <div className="win-outset bg-win-base p-1 w-full max-w-[420px] shadow-2xl">
+            {/* Titlebar */}
+            <div className="win-titlebar px-2 py-1 flex items-center justify-between mb-2">
+              <div className="flex items-center space-x-1.5 text-white text-[11px] font-bold">
+                <PixelIcon name="chart" size={14} className="text-white" />
+                <span>POSITION RISK MANAGEMENT: TP / SL</span>
+              </div>
+              <button
+                onClick={() => setTpSlModalPosition(null)}
+                className="win-btn px-1 py-0 text-[10px] font-bold text-black active:translate-x-0.5 active:translate-y-0.5"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-2 flex flex-col gap-2.5 text-black">
+              {/* Contract & Position Summary */}
+              <div className="win-inset-deep bg-[#121212] p-2 text-[10px] text-white flex flex-col gap-1">
+                <div className="flex justify-between items-center border-b border-[#333] pb-1">
+                  <span className="font-bold text-crt-amber">{pairLabelMap[tpSlModalPosition.pair]}</span>
+                  <span
+                    className={`px-1 py-0.2 border text-[9px] font-bold ${
+                      tpSlModalPosition.direction === 'LONG'
+                        ? 'bg-[#003311] text-[#00FF66] border-[#00FF66]'
+                        : 'bg-[#330000] text-[#FF3333] border-[#FF3333]'
+                    }`}
+                  >
+                    {tpSlModalPosition.direction} {tpSlModalPosition.leverage}x
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#AAA]">Entry Price:</span>
+                  <span className="text-white font-bold">${tpSlModalPosition.entryPrice.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#AAA]">Current Mark:</span>
+                  <span className="text-white font-bold">
+                    ${(prices[tpSlModalPosition.pair] || tpSlModalPosition.markPrice).toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#AAA]">Est. Liquidation:</span>
+                  <span className="text-crt-bearish font-bold">${tpSlModalPosition.liquidationPrice.toFixed(2)}</span>
+                </div>
+              </div>
+
+              {/* Take Profit (TP) Section */}
+              <div className="win-inset bg-win-base p-2 flex flex-col gap-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-[#006622]">Take Profit Target (TP):</span>
+                  <div className="flex space-x-1">
+                    {[10, 25, 50, 100, 200].map((roe) => (
+                      <button
+                        key={roe}
+                        type="button"
+                        onClick={() => {
+                          const isLong = tpSlModalPosition.direction === 'LONG';
+                          const target = isLong
+                            ? tpSlModalPosition.entryPrice * (1 + (roe / 100) / tpSlModalPosition.leverage)
+                            : tpSlModalPosition.entryPrice * (1 - (roe / 100) / tpSlModalPosition.leverage);
+                          setModalTpPrice(target.toFixed(2));
+                          setTpSlError(null);
+                        }}
+                        className="win-btn text-[8.5px] px-1 py-0 font-bold active:translate-x-0.5 active:translate-y-0.5 text-black"
+                      >
+                        +{roe}%
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="win-inset bg-white px-2 py-1 flex items-center">
+                  <span className="text-[#555] font-mono text-[12px] font-bold mr-1">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="e.g. 78500.00"
+                    value={modalTpPrice}
+                    onChange={(e) => {
+                      setModalTpPrice(e.target.value);
+                      setTpSlError(null);
+                    }}
+                    className="w-full bg-transparent font-mono text-[13px] font-bold text-black border-none outline-none p-0"
+                  />
+                </div>
+
+                {/* TP Estimated PnL Preview */}
+                {parseFloat(modalTpPrice) > 0 && (
+                  <div className="text-[9.5px] text-[#006622] font-bold flex justify-between bg-[#E8F8EE] p-1 border border-[#BBE5C9]">
+                    <span>Estimated Profit:</span>
+                    <span>
+                      {(() => {
+                        const target = parseFloat(modalTpPrice);
+                        const pnl = calculateUnrealizedPnl(
+                          tpSlModalPosition.direction,
+                          tpSlModalPosition.entryPrice,
+                          target,
+                          tpSlModalPosition.quantity
+                        );
+                        const roe = calculateRoe(pnl, tpSlModalPosition.initialMargin);
+                        return `+$${pnl.toFixed(2)} USDT (+${roe.toFixed(2)}% ROE)`;
+                      })()}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Stop Loss (SL) Section */}
+              <div className="win-inset bg-win-base p-2 flex flex-col gap-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-[#880000]">Stop Loss Target (SL):</span>
+                  <div className="flex space-x-1">
+                    {[10, 25, 50].map((roe) => (
+                      <button
+                        key={roe}
+                        type="button"
+                        onClick={() => {
+                          const isLong = tpSlModalPosition.direction === 'LONG';
+                          const target = isLong
+                            ? tpSlModalPosition.entryPrice * (1 - (roe / 100) / tpSlModalPosition.leverage)
+                            : tpSlModalPosition.entryPrice * (1 + (roe / 100) / tpSlModalPosition.leverage);
+                          setModalSlPrice(target.toFixed(2));
+                          setTpSlError(null);
+                        }}
+                        className="win-btn text-[8.5px] px-1 py-0 font-bold active:translate-x-0.5 active:translate-y-0.5 text-black"
+                      >
+                        -{roe}%
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="win-inset bg-white px-2 py-1 flex items-center">
+                  <span className="text-[#555] font-mono text-[12px] font-bold mr-1">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="e.g. 74000.00"
+                    value={modalSlPrice}
+                    onChange={(e) => {
+                      setModalSlPrice(e.target.value);
+                      setTpSlError(null);
+                    }}
+                    className="w-full bg-transparent font-mono text-[13px] font-bold text-black border-none outline-none p-0"
+                  />
+                </div>
+
+                {/* SL Estimated PnL Preview */}
+                {parseFloat(modalSlPrice) > 0 && (
+                  <div className="text-[9.5px] text-[#880000] font-bold flex justify-between bg-[#FEECEC] p-1 border border-[#F8BDBD]">
+                    <span>Estimated Loss:</span>
+                    <span>
+                      {(() => {
+                        const target = parseFloat(modalSlPrice);
+                        const pnl = calculateUnrealizedPnl(
+                          tpSlModalPosition.direction,
+                          tpSlModalPosition.entryPrice,
+                          target,
+                          tpSlModalPosition.quantity
+                        );
+                        const roe = calculateRoe(pnl, tpSlModalPosition.initialMargin);
+                        return `-$${Math.abs(pnl).toFixed(2)} USDT (${roe.toFixed(2)}% ROE)`;
+                      })()}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Validation Error Message */}
+              {tpSlError && (
+                <div className="bg-[#FFE5E5] text-[#990000] text-[9.5px] font-bold p-1 border border-[#FF3333]">
+                  ⚠ {tpSlError}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end space-x-1.5 pt-1">
+                {(tpSlModalPosition.tpPrice || tpSlModalPosition.slPrice) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      useTradingStore.getState().setTpSl(tpSlModalPosition.id, undefined, undefined);
+                      setTpSlModalPosition(null);
+                      soundFXService.playKeyClick();
+                    }}
+                    className="win-btn px-2 py-1 text-[10px] text-error font-bold active:translate-x-0.5 active:translate-y-0.5 mr-auto"
+                  >
+                    Clear TP/SL
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setTpSlModalPosition(null)}
+                  className="win-btn px-3 py-1 text-[10px] text-black font-bold active:translate-x-0.5 active:translate-y-0.5"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const tp = parseFloat(modalTpPrice);
+                    const sl = parseFloat(modalSlPrice);
+                    const isLong = tpSlModalPosition.direction === 'LONG';
+
+                    if (modalTpPrice && (isNaN(tp) || tp <= 0)) {
+                      setTpSlError('Invalid Take Profit price');
+                      return;
+                    }
+                    if (modalSlPrice && (isNaN(sl) || sl <= 0)) {
+                      setTpSlError('Invalid Stop Loss price');
+                      return;
+                    }
+
+                    if (tp > 0) {
+                      if (isLong && tp <= tpSlModalPosition.entryPrice) {
+                        setTpSlError('Take Profit for Long must be higher than entry price');
+                        return;
+                      }
+                      if (!isLong && tp >= tpSlModalPosition.entryPrice) {
+                        setTpSlError('Take Profit for Short must be lower than entry price');
+                        return;
+                      }
+                    }
+
+                    if (sl > 0) {
+                      if (isLong && sl >= tpSlModalPosition.entryPrice) {
+                        setTpSlError('Stop Loss for Long must be lower than entry price');
+                        return;
+                      }
+                      if (!isLong && sl <= tpSlModalPosition.entryPrice) {
+                        setTpSlError('Stop Loss for Short must be higher than entry price');
+                        return;
+                      }
+                    }
+
+                    useTradingStore.getState().setTpSl(
+                      tpSlModalPosition.id,
+                      tp > 0 ? tp : undefined,
+                      sl > 0 ? sl : undefined
+                    );
+                    soundFXService.playOrderExecuted();
+                    setTpSlModalPosition(null);
+                  }}
+                  className="win-btn bg-win-base text-titlebar-navy border-2 border-titlebar-navy px-3 py-1 text-[10px] font-bold active:translate-x-0.5 active:translate-y-0.5 shadow"
+                >
+                  Apply to Chart
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </WindowFrame>
   );
 };
