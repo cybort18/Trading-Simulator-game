@@ -23,6 +23,7 @@ import {
 } from '@/utils/simulationMath';
 import { useWalletStore } from './useWalletStore';
 import { useMarketDataStore } from './useMarketDataStore';
+import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 
 export interface LiquidationEvent {
   id: string;
@@ -173,6 +174,59 @@ export const useTradingStore = create<TradingStoreState>()(
           positions: [newPosition, ...state.positions],
         }));
 
+        // If Web3 cloud session is active, synchronize asynchronously with Postgres RPC
+        try {
+          const rawAuth = localStorage.getItem('cryptoos98-auth-storage');
+          if (rawAuth && isSupabaseConfigured && supabase) {
+            const parsed = JSON.parse(rawAuth);
+            const address = parsed.state?.walletAddress;
+            if (address && parsed.state?.isConnected) {
+              const client = supabase;
+              (async () => {
+                try {
+                  const { data, error } = await client.rpc('rpc_open_position', {
+                    p_wallet_address: address,
+                    p_pair: pair,
+                    p_direction: direction,
+                    p_margin_mode: marginMode,
+                    p_leverage: leverage,
+                    p_margin: normalizedMargin,
+                    p_entry_price: fillPrice,
+                  });
+
+                  if (error) {
+                    console.error('[useTradingStore] Cloud RPC open position error:', error.message);
+                  } else if (data?.position) {
+                    // Reconcile local position with database UUID and exact liquidation price
+                    set((s) => ({
+                      positions: s.positions.map((p) =>
+                        p.id === newPosition.id
+                          ? {
+                              ...p,
+                              id: data.position.id,
+                              liquidationPrice: Number(data.position.liquidation_price),
+                            }
+                          : p
+                      ),
+                    }));
+                    if (data.wallet) {
+                      useWalletStore.getState().setCloudWalletState({
+                        equity: Number(data.wallet.equity),
+                        availableMargin: Number(data.wallet.available_margin),
+                        lockedMargin: Number(data.wallet.locked_margin),
+                      });
+                    }
+                  }
+                } catch (rpcErr) {
+                  console.warn('[useTradingStore] Cloud RPC open error:', rpcErr);
+                }
+              })();
+            }
+          }
+        } catch {
+          // Fallback gracefully
+        }
+
         return { success: true, position: newPosition };
       },
 
@@ -238,6 +292,46 @@ export const useTradingStore = create<TradingStoreState>()(
           tradeHistory: [historyItem, ...s.tradeHistory],
         }));
 
+        // If Web3 cloud session is active, synchronize asynchronously with Postgres RPC
+        try {
+          const rawAuth = localStorage.getItem('cryptoos98-auth-storage');
+          if (rawAuth && isSupabaseConfigured && supabase) {
+            const parsed = JSON.parse(rawAuth);
+            const address = parsed.state?.walletAddress;
+            if (address && parsed.state?.isConnected) {
+              const client = supabase;
+              (async () => {
+                try {
+                  const { data, error } = await client.rpc('rpc_close_position', {
+                    p_wallet_address: address,
+                    p_position_id: position.id,
+                    p_exit_price: actualExitPrice,
+                    p_close_reason: 'MANUAL_CLOSE',
+                  });
+
+                  if (error) {
+                    console.error('[useTradingStore] Cloud RPC close position error:', error.message);
+                  } else if (data?.wallet) {
+                    useWalletStore.getState().setCloudWalletState({
+                      equity: Number(data.wallet.equity),
+                      availableMargin: Number(data.wallet.available_margin),
+                      lockedMargin: Number(data.wallet.locked_margin),
+                      realizedPnl: Number(data.wallet.total_realized_pnl),
+                      winCount: Number(data.wallet.win_count),
+                      lossCount: Number(data.wallet.loss_count),
+                      totalTrades: Number(data.wallet.total_trades),
+                    });
+                  }
+                } catch (rpcErr) {
+                  console.warn('[useTradingStore] Cloud RPC close error:', rpcErr);
+                }
+              })();
+            }
+          }
+        } catch {
+          // Fallback gracefully
+        }
+
         return { success: true, netRealizedPnl, roe };
       },
 
@@ -286,6 +380,30 @@ export const useTradingStore = create<TradingStoreState>()(
           latestLiquidation: liquidationEvent,
           isLiquidationModalOpen: true,
         }));
+
+        // If Web3 cloud session is active, synchronize liquidation with Postgres RPC
+        try {
+          const rawAuth = localStorage.getItem('cryptoos98-auth-storage');
+          if (rawAuth && isSupabaseConfigured && supabase) {
+            const parsed = JSON.parse(rawAuth);
+            const address = parsed.state?.walletAddress;
+            if (address && parsed.state?.isConnected) {
+              const client = supabase;
+              (async () => {
+                try {
+                  await client.rpc('rpc_close_position', {
+                    p_wallet_address: address,
+                    p_position_id: position.id,
+                    p_exit_price: trigger,
+                    p_close_reason: 'LIQUIDATED',
+                  });
+                } catch {
+                  // Fallback gracefully
+                }
+              })();
+            }
+          }
+        } catch {}
       },
 
       updatePricesAndPnL: (markPrices: Record<string, number>) => {

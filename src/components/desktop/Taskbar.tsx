@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useWindowStore } from '@/stores/useWindowStore';
 import { useMarketDataStore } from '@/stores/useMarketDataStore';
 import { useWalletStore } from '@/stores/useWalletStore';
+import { useAuthStore } from '@/stores/useAuthStore';
+import { Web3AuthService } from '@/services/Web3AuthService';
 import { WindowId } from '@/types/window';
 import { PixelIcon } from '@/components/common/PixelIcon';
 import { soundFXService } from '@/services/SoundFXService';
@@ -16,6 +18,10 @@ export const Taskbar: React.FC = () => {
   const connectionStatus = useMarketDataStore((state) => state.connectionStatus);
   const pingLatency = useMarketDataStore((state) => state.pingLatency);
   const equity = useWalletStore((state) => state.equity);
+
+  const isConnected = useAuthStore((state) => state.isConnected);
+  const walletAddress = useAuthStore((state) => state.walletAddress);
+  const openConnectModal = useAuthStore((state) => state.openConnectModal);
 
   const [isStartOpen, setIsStartOpen] = useState(false);
   const [timeStr, setTimeStr] = useState('');
@@ -137,6 +143,20 @@ export const Taskbar: React.FC = () => {
               </div>
             </button>
 
+            <button
+              onClick={() => {
+                openConnectModal();
+                setIsStartOpen(false);
+              }}
+              className="flex items-center space-x-2 px-2 py-1.5 hover:bg-titlebar-navy hover:text-white transition-none text-left"
+            >
+              <PixelIcon name="zap" size={18} className="text-[#000080]" />
+              <div className="flex flex-col">
+                <span className="font-bold">ConnectWallet.exe</span>
+                <span className="text-[9px] opacity-75">Web3 Cryptographic Adapter</span>
+              </div>
+            </button>
+
             <div className="h-[1px] bg-bevel-shadow my-1"></div>
 
             <button
@@ -253,6 +273,28 @@ export const Taskbar: React.FC = () => {
             <span className="text-black font-bold">BAL:</span>
             <span className="text-titlebar-navy font-bold">${equity.toFixed(2)}</span>
             <span className="text-[9px] text-black font-bold">USDT</span>
+          </div>
+
+          {/* Web3 Wallet / Guest Status Indicator */}
+          <div
+            onClick={openConnectModal}
+            className="border-l border-bevel-shadow pl-2 flex items-center space-x-1 font-bold cursor-pointer hover:bg-win-pressed px-1"
+            title={isConnected && walletAddress ? `Connected: ${walletAddress}` : 'Guest Session. Click to connect Web3 wallet.'}
+          >
+            <span className="text-black font-bold">ETH:</span>
+            {isConnected && walletAddress ? (
+              <>
+                <span className="w-2 h-2 bg-crt-bullish border border-[#004411] animate-pulse"></span>
+                <span className="text-[#008531] font-bold">
+                  [{Web3AuthService.truncateAddress(walletAddress)}]
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="w-2 h-2 bg-crt-amber border border-[#885500]"></span>
+                <span className="text-crt-amber font-bold">[GUEST]</span>
+              </>
+            )}
           </div>
 
           {/* Audio Speaker Icon Toggle */}

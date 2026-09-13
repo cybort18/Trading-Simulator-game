@@ -13,9 +13,11 @@ import { ResolutionGuard } from '@/components/common/ResolutionGuard';
 import { RetroErrorBoundary } from '@/components/common/RetroErrorBoundary';
 import { Taskbar } from '@/components/desktop/Taskbar';
 import { soundFXService } from '@/services/SoundFXService';
+import { ConnectWalletModal } from '@/components/modals/ConnectWalletModal';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 interface DesktopIconConfig {
-  id: WindowId | 'recycle_bin';
+  id: WindowId | 'recycle_bin' | 'connect_wallet';
   label: string;
   icon: string;
   color: string;
@@ -25,6 +27,7 @@ const DESKTOP_ICONS: DesktopIconConfig[] = [
   { id: 'turbotrade', label: 'TurboTrade.exe', icon: 'candlestick', color: 'text-titlebar-navy' },
   { id: 'degenvault', label: 'DegenVault.exe', icon: 'wallet', color: 'text-titlebar-navy' },
   { id: 'leaderboard', label: 'Leaderboard.exe', icon: 'trophy', color: 'text-crt-amber' },
+  { id: 'connect_wallet', label: 'ConnectWallet.exe', icon: 'zap', color: 'text-[#000080]' },
   { id: 'flexcard', label: 'ShareFlexCard.exe', icon: 'camera', color: 'text-[#555]' },
   { id: 'recycle_bin', label: 'Recycle Bin', icon: 'trash', color: 'text-[#666]' },
 ];
@@ -34,14 +37,20 @@ export const DesktopCanvas: React.FC = () => {
   const openWindow = useWindowStore((state) => state.openWindow);
   const focusWindow = useWindowStore((state) => state.focusWindow);
 
-  const handleIconClick = (e: React.MouseEvent, id: WindowId | 'recycle_bin') => {
+  const openConnectModal = useAuthStore((state) => state.openConnectModal);
+
+  const handleIconClick = (e: React.MouseEvent, id: WindowId | 'recycle_bin' | 'connect_wallet') => {
     e.stopPropagation();
     setSelectedIcon(id);
   };
 
-  const handleIconDoubleClick = (id: WindowId | 'recycle_bin') => {
+  const handleIconDoubleClick = (id: WindowId | 'recycle_bin' | 'connect_wallet') => {
     if (id === 'recycle_bin') {
       alert('Recycle Bin: 0 liquidated accounts in trash.');
+      return;
+    }
+    if (id === 'connect_wallet') {
+      openConnectModal();
       return;
     }
     openWindow(id);
@@ -127,6 +136,10 @@ export const DesktopCanvas: React.FC = () => {
 
       <RetroErrorBoundary name="LiquidationModal">
         <LiquidationModal />
+      </RetroErrorBoundary>
+
+      <RetroErrorBoundary name="ConnectWalletModal">
+        <ConnectWalletModal />
       </RetroErrorBoundary>
 
       {/* Retro BSOD Anti-Tamper Crash Shield */}

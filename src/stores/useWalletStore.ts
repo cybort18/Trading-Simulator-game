@@ -8,6 +8,7 @@ import {
   DAILY_REWARD_TIERS,
   type DailyRewardTier,
 } from '@/services/DailyClaimManager';
+import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 
 export { DAILY_REWARD_TIERS, type DailyRewardTier };
 
@@ -33,6 +34,9 @@ export interface WalletState {
   claimFaucet: (amount?: number) => boolean;
   claimDailyReward: () => { success: boolean; amount?: number; error?: string };
   resetWallet: (amount?: number) => void;
+
+  // Cloud RPC & Synced State
+  setCloudWalletState: (data: Partial<WalletState>) => void;
 
   // Computed getters
   getWinRate: () => number;
@@ -133,6 +137,13 @@ export const useWalletStore = create<WalletState>()(
         }));
       },
 
+      setCloudWalletState: (data: Partial<WalletState>) => {
+        set((state) => ({
+          ...state,
+          ...data,
+        }));
+      },
+
       claimFaucet: (amount: number = 10.00) => {
         const state = get();
         if (state.equity < 1.00) {
@@ -140,6 +151,34 @@ export const useWalletStore = create<WalletState>()(
             equity: state.equity + amount,
             availableMargin: state.availableMargin + amount,
           });
+
+          // Trigger Supabase RPC if cloud session is active
+          try {
+            const rawAuth = localStorage.getItem('cryptoos98-auth-storage');
+            if (rawAuth && isSupabaseConfigured && supabase) {
+              const parsed = JSON.parse(rawAuth);
+              const address = parsed.state?.walletAddress;
+              if (address && parsed.state?.isConnected) {
+                const client = supabase;
+                (async () => {
+                  try {
+                    const { data, error } = await client.rpc('rpc_claim_faucet', { p_wallet_address: address });
+                    if (!error && data?.wallet) {
+                      set({
+                        equity: Number(data.wallet.equity),
+                        availableMargin: Number(data.wallet.available_margin),
+                      });
+                    }
+                  } catch (err) {
+                    console.warn('[useWalletStore] Cloud RPC faucet sync error:', err);
+                  }
+                })();
+              }
+            }
+          } catch {
+            // Fallback gracefully
+          }
+
           return true;
         }
         return false;
@@ -160,6 +199,37 @@ export const useWalletStore = create<WalletState>()(
           currentStreakDay: res.nextStreakDay,
           lastClaimTimestamp: now,
         });
+
+        // Trigger Supabase RPC if cloud session is active
+        try {
+          const rawAuth = localStorage.getItem('cryptoos98-auth-storage');
+          if (rawAuth && isSupabaseConfigured && supabase) {
+            const parsed = JSON.parse(rawAuth);
+            const address = parsed.state?.walletAddress;
+            if (address && parsed.state?.isConnected) {
+              const client = supabase;
+              (async () => {
+                try {
+                  const { data, error } = await client.rpc('rpc_claim_daily_reward', { p_wallet_address: address });
+                  if (!error && data?.wallet) {
+                    set({
+                      equity: Number(data.wallet.equity),
+                      availableMargin: Number(data.wallet.available_margin),
+                      currentStreakDay: Number(data.wallet.daily_streak),
+                      lastClaimTimestamp: data.wallet.last_daily_claim_at
+                        ? new Date(data.wallet.last_daily_claim_at).getTime()
+                        : now,
+                    });
+                  }
+                } catch (err) {
+                  console.warn('[useWalletStore] Cloud RPC daily claim sync error:', err);
+                }
+              })();
+            }
+          }
+        } catch {
+          // Fallback gracefully
+        }
 
         return { success: true, amount: res.rewardAmount };
       },

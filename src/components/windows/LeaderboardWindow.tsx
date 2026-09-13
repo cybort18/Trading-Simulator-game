@@ -1,7 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { WindowFrame } from '@/components/desktop/WindowFrame';
 import { useWindowStore } from '@/stores/useWindowStore';
 import { useWalletStore } from '@/stores/useWalletStore';
+import { useAuthStore } from '@/stores/useAuthStore';
+import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 
 interface Competitor {
   rankNum: number;
@@ -53,6 +55,12 @@ export const LeaderboardWindow: React.FC = () => {
   const [sortKey, setSortKey] = useState<SortKey>('rank');
   const [sortAsc, setSortAsc] = useState<boolean>(true);
 
+  const [cloudCompetitors, setCloudCompetitors] = useState<Competitor[] | null>(null);
+  const [lastSyncTime, setLastSyncTime] = useState<string>('14:45:12 UTC');
+
+  const username = useAuthStore((state) => state.username);
+  const isConnected = useAuthStore((state) => state.isConnected);
+
   const openWindow = useWindowStore((state) => state.openWindow);
   const focusWindow = useWindowStore((state) => state.focusWindow);
 
@@ -60,6 +68,65 @@ export const LeaderboardWindow: React.FC = () => {
   const allTimeRoi = useWalletStore((state) => state.getAllTimeRoi());
   const realizedPnl = useWalletStore((state) => state.realizedPnl);
   const totalTrades = useWalletStore((state) => state.totalTrades);
+
+  // Fetch real-time leaderboard data from Supabase
+  const fetchCloudLeaderboard = useCallback(async () => {
+    if (!isSupabaseConfigured || !supabase) return;
+    try {
+      const { data, error } = await supabase
+        .from('leaderboard_view')
+        .select('*')
+        .limit(20);
+
+      if (!error && data && data.length > 0) {
+        const mapped: Competitor[] = data.map((row: any, idx: number) => ({
+          rankNum: Number(row.rank || idx + 1),
+          name: row.username || `Trader_${String(row.wallet_address).substring(0, 6)}`,
+          tier: row.rank_tier || 'Novice Liquidator',
+          winRateNum: Number(row.win_rate || 0),
+          roiNum: Number(row.all_time_roi || 0),
+          pnlNum: Number(row.total_realized_pnl || 0),
+          avatar: row.avatar === 'pixel_face_1' ? '😎' : '👑',
+          badge: Number(row.all_time_roi) > 100 ? 'Whale' : 'Trader',
+        }));
+        setCloudCompetitors(mapped);
+        const now = new Date();
+        setLastSyncTime(`${now.getUTCHours().toString().padStart(2, '0')}:${now.getUTCMinutes().toString().padStart(2, '0')}:${now.getUTCSeconds().toString().padStart(2, '0')} UTC`);
+      }
+    } catch {
+      // Fallback to static mock seamlessly
+    }
+  }, []);
+
+  // Supabase Realtime Channel Subscription
+  useEffect(() => {
+    fetchCloudLeaderboard();
+
+    if (!isSupabaseConfigured || !supabase) return;
+    const client = supabase;
+
+    const channel = client
+      .channel('cryptoos_realtime_leaderboard')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'wallets' },
+        () => {
+          fetchCloudLeaderboard();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'trades_history' },
+        () => {
+          fetchCloudLeaderboard();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      client.removeChannel(channel);
+    };
+  }, [fetchCloudLeaderboard]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -70,8 +137,15 @@ export const LeaderboardWindow: React.FC = () => {
     }
   };
 
+  const activeCategoryList = useMemo(() => {
+    if (cloudCompetitors && cloudCompetitors.length > 0) {
+      return cloudCompetitors;
+    }
+    return CATEGORY_DATA[activeFilter];
+  }, [cloudCompetitors, activeFilter]);
+
   const sortedData = useMemo(() => {
-    const raw = [...CATEGORY_DATA[activeFilter]];
+    const raw = [...activeCategoryList];
     return raw.sort((a, b) => {
       let comparison = 0;
       switch (sortKey) {
@@ -96,11 +170,11 @@ export const LeaderboardWindow: React.FC = () => {
       }
       return sortAsc ? comparison : -comparison;
     });
-  }, [activeFilter, sortKey, sortAsc]);
+  }, [activeCategoryList, sortKey, sortAsc]);
 
-  const top1 = CATEGORY_DATA[activeFilter][0] || sortedData[0];
-  const top2 = CATEGORY_DATA[activeFilter][1] || sortedData[1];
-  const top3 = CATEGORY_DATA[activeFilter][2] || sortedData[2];
+  const top1 = activeCategoryList[0] || sortedData[0];
+  const top2 = activeCategoryList[1] || sortedData[1];
+  const top3 = activeCategoryList[2] || sortedData[2];
 
   const userRankDisplay = totalTrades === 0 ? '#---' : allTimeRoi > 100 ? '#48' : '#142';
   const userTier = totalTrades === 0 ? 'Novice Unranked' : totalTrades > 15 ? 'Veteran Scalper' : 'Novice Liquidator';
@@ -112,13 +186,15 @@ export const LeaderboardWindow: React.FC = () => {
       statusContent={
         <>
           <div className="flex items-center space-x-2">
-            <span className="text-crt-bullish font-bold">● LAST SYNC: 14:45:12 UTC</span>
+            <span className="text-crt-bullish font-bold">● LAST SYNC: {lastSyncTime}</span>
             <span>|</span>
             <span>NODE: #NODE-7729</span>
             <span>|</span>
+            <span>CLOUD: {isSupabaseConfigured ? 'REALTIME ON' : 'SANDBOX'}</span>
+            <span>|</span>
             <span>CATEGORY: {activeFilter.toUpperCase()}</span>
           </div>
-          <div className="font-bold text-titlebar-navy font-mono">TOTAL TRADERS: 4,921 ACTIVE</div>
+          <div className="font-bold text-titlebar-navy font-mono">TOTAL TRADERS: {activeCategoryList.length > 10 ? '4,921 ACTIVE' : 'REALTIME SYNCED'}</div>
         </>
       }
     >
@@ -315,9 +391,11 @@ export const LeaderboardWindow: React.FC = () => {
           {/* Sticky User Row (YOU) with Real Reactive Data */}
           <div className="grid grid-cols-12 px-2 py-1 items-center bg-titlebar-navy text-white font-mono text-[10px] border-t-2 border-bevel-highlight select-none shadow-md">
             <div className="col-span-1 text-center font-bold text-crt-amber">{userRankDisplay}</div>
-            <div className="col-span-3 font-bold flex items-center gap-1">
-              <span>SatoshiDegen_98</span>
-              <span className="win-outset bg-crt-amber text-black px-1 text-[8px] font-bold">YOU</span>
+            <div className="col-span-3 font-bold flex items-center gap-1 min-w-0 pr-1">
+              <span className="truncate">{username}</span>
+              <span className="win-outset bg-crt-amber text-black px-1 text-[8px] font-bold flex-shrink-0">
+                {isConnected ? 'YOU (WEB3)' : 'YOU (GUEST)'}
+              </span>
             </div>
             <div className="col-span-2 text-[10px] text-[#EEE] font-medium">{userTier}</div>
             <div className="col-span-2 text-right font-bold">{winRate.toFixed(1)}%</div>

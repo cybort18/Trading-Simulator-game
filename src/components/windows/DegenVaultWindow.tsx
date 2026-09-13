@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { WindowFrame } from '@/components/desktop/WindowFrame';
 import { PixelIcon } from '@/components/common/PixelIcon';
 import { useWalletStore, DAILY_REWARD_TIERS } from '@/stores/useWalletStore';
+import { useAuthStore } from '@/stores/useAuthStore';
+import { Web3AuthService } from '@/services/Web3AuthService';
 import confetti from 'canvas-confetti';
 import { soundFXService } from '@/services/SoundFXService';
 
@@ -71,6 +73,11 @@ export const DegenVaultWindow: React.FC = () => {
   const claimDailyReward = useWalletStore((state) => state.claimDailyReward);
   const getTimeUntilNextDailyClaim = useWalletStore((state) => state.getTimeUntilNextDailyClaim);
 
+  const username = useAuthStore((state) => state.username);
+  const isConnected = useAuthStore((state) => state.isConnected);
+  const walletAddress = useAuthStore((state) => state.walletAddress);
+  const openConnectModal = useAuthStore((state) => state.openConnectModal);
+
   const [remainingMs, setRemainingMs] = useState<number>(0);
   const [claimFeedback, setClaimFeedback] = useState<string | null>(null);
 
@@ -136,27 +143,50 @@ export const DegenVaultWindow: React.FC = () => {
         {/* =================================================================== */}
         <div className="win-outset bg-surface-high p-2 flex items-center justify-between gap-3">
           <div className="flex items-center space-x-3">
-            {/* Retro Pixel Avatar */}
+            {/* Retro Pixel Avatar or Wallet Blockie */}
             <div className="w-12 h-12 win-inset-deep p-0.5 flex items-center justify-center flex-shrink-0">
-              <div className="w-full h-full bg-[#1e293b] flex flex-col items-center justify-center border border-titlebar-navy">
-                <span className="text-[26px]">😎</span>
-              </div>
+              {isConnected && walletAddress ? (
+                <div
+                  className="w-full h-full flex flex-col items-center justify-center border font-mono font-bold text-white text-[16px]"
+                  style={{
+                    backgroundColor: Web3AuthService.getAddressPalette(walletAddress).primary,
+                    borderColor: Web3AuthService.getAddressPalette(walletAddress).accent,
+                  }}
+                >
+                  {walletAddress.substring(2, 4).toUpperCase()}
+                </div>
+              ) : (
+                <div className="w-full h-full bg-[#1e293b] flex flex-col items-center justify-center border border-titlebar-navy">
+                  <span className="text-[26px]">😎</span>
+                </div>
+              )}
             </div>
 
             {/* Profile Data */}
             <div className="flex flex-col">
               <div className="flex items-center space-x-2">
                 <span className="font-headline text-[15px] font-bold text-black tracking-tight">
-                  SatoshiDegen_98
+                  {username}
                 </span>
-                <span className="bg-titlebar-navy text-white text-[9px] font-bold px-1.5 py-0.2 win-outset">
-                  ONLINE
-                </span>
+                {isConnected ? (
+                  <span className="bg-[#008531] text-white text-[9px] font-bold px-1.5 py-0.2 win-outset">
+                    VERIFIED ON-CHAIN
+                  </span>
+                ) : (
+                  <span className="bg-crt-amber text-black text-[9px] font-bold px-1.5 py-0.2 win-outset">
+                    GUEST SANDBOX
+                  </span>
+                )}
               </div>
               <div className="flex items-center space-x-2 font-mono text-[10px] text-[#333] font-semibold">
-                <span>Node: <strong className="text-black">#NODE-7729</strong></span>
+                <span>Account: <strong className="text-black">{isConnected && walletAddress ? Web3AuthService.truncateAddress(walletAddress) : 'Local Guest (10 USDT)'}</strong></span>
                 <span>•</span>
-                <span>Build: <strong className="text-black">v4.10.1998</strong></span>
+                <button
+                  onClick={openConnectModal}
+                  className="text-titlebar-navy underline hover:text-[#0000A0] font-bold cursor-pointer"
+                >
+                  {isConnected ? '[Manage Wallet]' : '[Connect Web3]'}
+                </button>
               </div>
             </div>
           </div>
