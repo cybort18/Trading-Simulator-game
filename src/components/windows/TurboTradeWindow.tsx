@@ -602,7 +602,7 @@ export const TurboTradeWindow: React.FC = () => {
                                   <span className="text-[#666]">TP: --</span>
                                 )}
                                 {pos.slPrice ? (
-                                  <span className="text-[#FF9900] font-bold">SL: ${pos.slPrice.toFixed(2)}</span>
+                                  <span className="text-[#FF3333] font-bold">SL: ${pos.slPrice.toFixed(2)}</span>
                                 ) : (
                                   <span className="text-[#666]">SL: --</span>
                                 )}
@@ -1262,7 +1262,7 @@ export const TurboTradeWindow: React.FC = () => {
               {/* Stop Loss (SL) Section */}
               <div className="win-inset bg-win-base p-2 flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-[#880000]">Stop Loss Target (SL):</span>
+                  <span className="text-[11px] font-bold text-[#BA1A1A]">Stop Loss Target (SL):</span>
                   <div className="flex space-x-1">
                     {[10, 25, 50].map((roe) => (
                       <button
@@ -1301,7 +1301,7 @@ export const TurboTradeWindow: React.FC = () => {
 
                 {/* SL Estimated PnL Preview */}
                 {parseFloat(modalSlPrice) > 0 && (
-                  <div className="text-[9.5px] text-[#880000] font-bold flex justify-between bg-[#FEECEC] p-1 border border-[#F8BDBD]">
+                  <div className="text-[9.5px] text-[#BA1A1A] font-bold flex justify-between bg-[#FEECEC] p-1 border border-[#F8BDBD]">
                     <span>Estimated Loss:</span>
                     <span>
                       {(() => {

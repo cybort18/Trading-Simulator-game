@@ -10,11 +10,13 @@ import {
   Time,
   IPriceLine,
   LineStyle,
+  AutoscaleInfo,
 } from 'lightweight-charts';
 import { TradingPair } from '@/types/market';
 import { useMarketDataStore } from '@/stores/useMarketDataStore';
 import { useTradingStore } from '@/stores/useTradingStore';
 import { BinanceWsService } from '@/services/BinanceWsService';
+import { Position } from '@/types/trading';
 
 interface RetroCandleChartProps {
   pair: TradingPair;
@@ -33,6 +35,12 @@ export const RetroCandleChart: React.FC<RetroCandleChartProps> = ({ pair, timefr
   const latestCandle = useMarketDataStore((state) => state.latestCandles[pair]);
   // Open positions from TradingStore to visualize entry, liq, and TP
   const positions = useTradingStore((state) => state.positions);
+
+  const positionsRef = useRef<Position[]>(positions);
+  positionsRef.current = positions;
+
+  const pairRef = useRef<TradingPair>(pair);
+  pairRef.current = pair;
 
   // Initialize and hydrate chart on mount or pair/timeframe change
   useEffect(() => {
@@ -84,6 +92,44 @@ export const RetroCandleChart: React.FC<RetroCandleChartProps> = ({ pair, timefr
         type: 'price',
         precision: 2,
         minMove: 0.01,
+      },
+      autoscaleInfoProvider: (original: () => AutoscaleInfo | null) => {
+        const res = original();
+        if (!res || !res.priceRange) return res;
+
+        const activePositions = positionsRef.current.filter((p) => p.pair === pairRef.current);
+        if (activePositions.length === 0) return res;
+
+        let min = res.priceRange.minValue;
+        let max = res.priceRange.maxValue;
+
+        for (const pos of activePositions) {
+          if (pos.entryPrice > 0) {
+            min = Math.min(min, pos.entryPrice);
+            max = Math.max(max, pos.entryPrice);
+          }
+          if (pos.liquidationPrice > 0) {
+            min = Math.min(min, pos.liquidationPrice);
+            max = Math.max(max, pos.liquidationPrice);
+          }
+          if (pos.tpPrice && pos.tpPrice > 0) {
+            min = Math.min(min, pos.tpPrice);
+            max = Math.max(max, pos.tpPrice);
+          }
+          if (pos.slPrice && pos.slPrice > 0) {
+            min = Math.min(min, pos.slPrice);
+            max = Math.max(max, pos.slPrice);
+          }
+        }
+
+        const padding = (max - min) * 0.05;
+        return {
+          priceRange: {
+            minValue: min - padding,
+            maxValue: max + padding,
+          },
+          margins: res.margins,
+        };
       },
     });
 
@@ -165,12 +211,11 @@ export const RetroCandleChart: React.FC<RetroCandleChartProps> = ({ pair, timefr
     const activePositions = positions.filter((p) => p.pair === pair);
 
     activePositions.forEach((pos) => {
-      // 1. Entry Price Line
+      // 1. Entry Price Line (Cyan #00E5FF)
       try {
-        const isLong = pos.direction === 'LONG';
         const entryLine = series.createPriceLine({
           price: pos.entryPrice,
-          color: isLong ? '#00E5FF' : '#FFB703',
+          color: '#00E5FF',
           lineWidth: 1,
           lineStyle: LineStyle.Solid,
           axisLabelVisible: true,
@@ -181,13 +226,13 @@ export const RetroCandleChart: React.FC<RetroCandleChartProps> = ({ pair, timefr
         console.warn('Failed to add entry price line:', err);
       }
 
-      // 2. Estimated Liquidation Line
+      // 2. Estimated Liquidation Line (Amber #FFAA00, matching chart indicator)
       if (pos.liquidationPrice > 0) {
         try {
           const liqLine = series.createPriceLine({
             price: pos.liquidationPrice,
-            color: '#FF3333',
-            lineWidth: 1,
+            color: '#FFAA00',
+            lineWidth: 2,
             lineStyle: LineStyle.Dashed,
             axisLabelVisible: true,
             title: `EST. LIQ`,
@@ -198,7 +243,7 @@ export const RetroCandleChart: React.FC<RetroCandleChartProps> = ({ pair, timefr
         }
       }
 
-      // 3. Take Profit (TP) Line
+      // 3. Take Profit (TP) Line (Green #00FF66)
       if (pos.tpPrice && pos.tpPrice > 0) {
         try {
           const tpLine = series.createPriceLine({
@@ -215,14 +260,14 @@ export const RetroCandleChart: React.FC<RetroCandleChartProps> = ({ pair, timefr
         }
       }
 
-      // 4. Stop Loss (SL) Line
+      // 4. Stop Loss (SL) Line (Red #FF3333)
       if (pos.slPrice && pos.slPrice > 0) {
         try {
           const slLine = series.createPriceLine({
             price: pos.slPrice,
-            color: '#FF5500',
+            color: '#FF3333',
             lineWidth: 2,
-            lineStyle: LineStyle.Dotted,
+            lineStyle: LineStyle.Dashed,
             axisLabelVisible: true,
             title: `STOP LOSS`,
           });
@@ -232,6 +277,14 @@ export const RetroCandleChart: React.FC<RetroCandleChartProps> = ({ pair, timefr
         }
       }
     });
+
+    // Force autoscale re-evaluation so all lines (Liq, SL, Entry, TP) fit on the price scale
+    try {
+      series.applyOptions({});
+      series.priceScale().applyOptions({ autoScale: true });
+    } catch {
+      // Safe catch
+    }
 
     return () => {
       if (seriesRef.current) {
