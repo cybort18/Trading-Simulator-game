@@ -279,10 +279,10 @@ export const DegenVaultWindow: React.FC = () => {
             <span className="text-[16px] leading-none mt-0.5">⚠️</span>
             <div className="flex-1 min-w-0">
               <strong className="block text-titlebar-navy font-bold">
-                Akun ini adalah Akun Tamu (Guest Profile)
+                Guest Profile (Sandbox Mode)
               </strong>
               <p className="text-[10px] text-[#333] leading-snug mt-0.5">
-                Progress saldo, streak login, dan riwayat trading disimpan di memori browser lokal dan <strong>tidak tersimpan otomatis ke Cloud</strong>. Hubungkan Web3 Wallet Anda untuk menyimpan progress secara permanen, membuka pendaftaran Leaderboard global, dan mengakses seluruh fitur game!
+                Balance progress, login streaks, and trading history are stored in local browser memory and <strong>will not sync to the cloud automatically</strong>. Connect a Web3 Wallet to permanently save your progress, enter the global Leaderboard, and unlock all features!
               </p>
             </div>
             <button

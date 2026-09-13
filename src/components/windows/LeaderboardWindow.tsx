@@ -208,7 +208,7 @@ export const LeaderboardWindow: React.FC = () => {
           label: 'Weekly PnL Cup',
           onClick: () => {
             if (!isConnected) {
-              alert('Akses Terkunci: Turnamen mingguan hanya untuk akun terverifikasi Web3.');
+              alert('Access Locked: Weekly tournaments are exclusive to Web3 verified wallets.');
               return;
             }
             setActiveFilter('weekly');
@@ -235,9 +235,9 @@ export const LeaderboardWindow: React.FC = () => {
           label: 'Prize Eligibility Status',
           onClick: () => {
             if (!isConnected) {
-              alert('Status Hadiah:\n\nAnda saat ini menggunakan Guest Profile. Hubungkan Web3 wallet untuk memenuhi syarat distribusi hadiah Season 1.');
+              alert('Prize Eligibility Status:\n\nYou are currently using a Guest Profile. Connect a Web3 wallet to qualify for the Season 1 prize pool distribution.');
             } else {
-              alert('Status Hadiah:\n\nWallet terverifikasi. Anda memenuhi syarat untuk mengklaim hadiah Season 1.');
+              alert('Prize Eligibility Status:\n\nWallet verified! You are fully eligible for Season 1 prize distribution.');
             }
           },
         },
@@ -289,10 +289,10 @@ export const LeaderboardWindow: React.FC = () => {
               <span className="text-[16px] leading-none">🔒</span>
               <div>
                 <strong className="block text-titlebar-navy font-bold">
-                  Guest Profile (Mode Sandbox / Tidak Terdaftar di Ranking Global)
+                  Guest Profile (Sandbox Mode / Unranked on Global Arena)
                 </strong>
                 <span className="text-[10px] text-[#333]">
-                  Akun tamu tidak dapat berpartisipasi dalam peringkat resmi Leaderboard atau memenangkan hadiah Season 1. Hubungkan Web3 Wallet Anda untuk masuk ke Leaderboard resmi!
+                  Guest accounts cannot compete in the official global cloud Leaderboard or claim Season 1 rewards. Connect your Web3 Wallet to enter the official Leaderboard!
                 </span>
               </div>
             </div>
@@ -327,7 +327,7 @@ export const LeaderboardWindow: React.FC = () => {
             <button
               onClick={() => {
                 if (!isConnected) {
-                  alert('Akses Event Terkunci!\n\nAkun Tamu (Guest Profile) tidak dapat berpartisipasi dalam turnamen mingguan. Silakan hubungkan Web3 Wallet Anda untuk mendaftarkan akun resmi.');
+                  alert('Tournament Access Locked!\n\nGuest Profiles cannot participate in weekly tournaments. Please connect a Web3 Wallet to register an official account.');
                   return;
                 }
                 setActiveFilter('weekly');
