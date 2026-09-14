@@ -1,0 +1,15 @@
+services:
+  cryptoos-98:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - VITE_SUPABASE_URL=${VITE_SUPABASE_URL:-}
+        - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY:-}
+    container_name: cryptoos-98
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    env_file:
+      - path: .env.local
+        required: false

@@ -29,3 +29,6 @@ jobs:
 
       - name: Verify production build
         run: npm run build
+
+      - name: Verify Docker image build
+        run: docker build -t cryptoos-98:test .
