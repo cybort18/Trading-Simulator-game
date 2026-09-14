@@ -100,8 +100,12 @@ export const LeaderboardWindow: React.FC = () => {
     }
   }, []);
 
-  // Supabase Realtime Channel Subscription
+  const isLeaderboardOpen = useWindowStore((state) => state.windows.leaderboard?.isOpen ?? false);
+
+  // Supabase Realtime Channel Subscription - ONLY active when window is open
   useEffect(() => {
+    if (!isLeaderboardOpen) return;
+
     fetchCloudLeaderboard();
 
     if (!isSupabaseConfigured || !supabase) return;
@@ -128,7 +132,7 @@ export const LeaderboardWindow: React.FC = () => {
     return () => {
       client.removeChannel(channel);
     };
-  }, [fetchCloudLeaderboard]);
+  }, [isLeaderboardOpen, fetchCloudLeaderboard]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {

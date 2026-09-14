@@ -26,9 +26,9 @@ const LEVERAGE_SNAPS = [1, 5, 10, 20, 50, 100];
 export const TurboTradeWindow: React.FC = () => {
   const selectedPair = useMarketDataStore((state) => state.selectedPair);
   const setSelectedPair = useMarketDataStore((state) => state.setSelectedPair);
-  const prices = useMarketDataStore((state) => state.prices);
-  const priceDirections = useMarketDataStore((state) => state.priceDirections);
-  const tickers = useMarketDataStore((state) => state.tickers);
+  const currentPrice = useMarketDataStore((state) => state.prices[selectedPair] ?? 64281.5);
+  const currentTicker = useMarketDataStore((state) => state.tickers[selectedPair]);
+  const direction = useMarketDataStore((state) => state.priceDirections[selectedPair]);
   const connectionStatus = useMarketDataStore((state) => state.connectionStatus);
 
   const availableMargin = useWalletStore((state) => state.availableMargin);
@@ -71,9 +71,6 @@ export const TurboTradeWindow: React.FC = () => {
     type: 'TAKE_PROFIT' | 'STOP_LOSS';
   } | null>(null);
 
-  const currentPrice = prices[selectedPair] || 64281.5;
-  const currentTicker = tickers[selectedPair];
-  const direction = priceDirections[selectedPair];
 
   // Subscribe to automated Take Profit & Stop Loss triggers
   useEffect(() => {
@@ -257,7 +254,7 @@ export const TurboTradeWindow: React.FC = () => {
           disabled: positions.length === 0,
           onClick: () => {
             positions.forEach((pos) => {
-              const mark = prices[pos.pair] || pos.entryPrice;
+              const mark = pos.markPrice || (pos.pair === selectedPair ? currentPrice : pos.entryPrice);
               closePosition(pos.id, mark);
             });
             soundFXService.playOrderExecuted();
@@ -578,7 +575,7 @@ export const TurboTradeWindow: React.FC = () => {
                     </thead>
                     <tbody className="divide-y divide-[#1F1F1F]">
                       {positions.map((pos) => {
-                        const mark = prices[pos.pair] || pos.markPrice;
+                        const mark = pos.markPrice || (pos.pair === selectedPair ? currentPrice : pos.entryPrice);
                         const isBullish = pos.unrealizedPnl >= 0;
                         return (
                           <tr key={pos.id} className="hover:bg-[#1A1A1A]">
@@ -1239,7 +1236,7 @@ export const TurboTradeWindow: React.FC = () => {
                 <div className="flex justify-between">
                   <span className="text-[#AAA]">Current Mark:</span>
                   <span className="text-white font-bold">
-                    ${(prices[tpSlModalPosition.pair] || tpSlModalPosition.markPrice).toFixed(2)}
+                    ${(tpSlModalPosition.markPrice || (tpSlModalPosition.pair === selectedPair ? currentPrice : tpSlModalPosition.entryPrice)).toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between">

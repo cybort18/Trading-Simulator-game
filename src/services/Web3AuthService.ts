@@ -178,4 +178,34 @@ export class Web3AuthService {
       return false;
     }
   }
+
+  /**
+   * Subscribes to EIP-1193 provider events (accountsChanged, chainChanged).
+   */
+  public static subscribeProviderEvents(handlers: {
+    onAccountsChanged?: (accounts: string[]) => void;
+    onChainChanged?: (chainId: string) => void;
+  }): () => void {
+    if (typeof window === 'undefined') return () => {};
+    const ethereum = (window as unknown as { ethereum?: { on?: (event: string, cb: (...args: any[]) => void) => void; removeListener?: (event: string, cb: (...args: any[]) => void) => void } }).ethereum;
+    if (!ethereum || typeof ethereum.on !== 'function') return () => {};
+
+    const handleAccounts = (accounts: string[]) => {
+      handlers.onAccountsChanged?.(accounts);
+    };
+
+    const handleChain = (chainId: string) => {
+      handlers.onChainChanged?.(chainId);
+    };
+
+    ethereum.on('accountsChanged', handleAccounts);
+    ethereum.on('chainChanged', handleChain);
+
+    return () => {
+      if (typeof ethereum.removeListener === 'function') {
+        ethereum.removeListener('accountsChanged', handleAccounts);
+        ethereum.removeListener('chainChanged', handleChain);
+      }
+    };
+  }
 }

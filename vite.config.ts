@@ -10,6 +10,19 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'zustand'],
+          'vendor-chart': ['lightweight-charts'],
+          'vendor-web3': ['viem', '@supabase/supabase-js'],
+          'vendor-media': ['html-to-image', 'canvas-confetti'],
+        },
+      },
+    },
+  },
   server: {
     port: 3000,
     host: true,
