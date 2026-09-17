@@ -111,6 +111,17 @@ export const Taskbar: React.FC = () => {
             </button>
 
             <button
+              onClick={() => handleStartAppClick('orderbook')}
+              className="flex items-center space-x-2 px-2 py-1.5 hover:bg-titlebar-navy hover:text-white transition-none text-left"
+            >
+              <PixelIcon name="layers" size={18} className="text-[#008531]" />
+              <div className="flex flex-col">
+                <span className="font-bold">OrderBook.exe</span>
+                <span className="text-[9px] opacity-75">Level-2 DOM & Tape Reader</span>
+              </div>
+            </button>
+
+            <button
               onClick={() => handleStartAppClick('degenvault')}
               className="flex items-center space-x-2 px-2 py-1.5 hover:bg-titlebar-navy hover:text-white transition-none text-left"
             >

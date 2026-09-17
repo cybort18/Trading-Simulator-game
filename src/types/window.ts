@@ -1,4 +1,4 @@
-export type WindowId = 'turbotrade' | 'degenvault' | 'leaderboard' | 'welcome' | 'flexcard';
+export type WindowId = 'turbotrade' | 'degenvault' | 'leaderboard' | 'welcome' | 'flexcard' | 'orderbook';
 
 export interface WindowPosition {
   x: number;

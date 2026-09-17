@@ -23,6 +23,9 @@ const ConnectWalletModal = React.lazy(() =>
 const LeaderboardWindow = React.lazy(() =>
   import('@/components/windows/LeaderboardWindow').then((m) => ({ default: m.LeaderboardWindow }))
 );
+const OrderBookWindow = React.lazy(() =>
+  import('@/components/windows/OrderBookWindow').then((m) => ({ default: m.OrderBookWindow }))
+);
 const BSODModal = React.lazy(() =>
   import('@/components/modals/BSODModal').then((m) => ({ default: m.BSODModal }))
 );
@@ -36,6 +39,7 @@ interface DesktopIconConfig {
 
 const DESKTOP_ICONS: DesktopIconConfig[] = [
   { id: 'turbotrade', label: 'TurboTrade.exe', icon: 'candlestick', color: 'text-titlebar-navy' },
+  { id: 'orderbook', label: 'OrderBook.exe', icon: 'layers', color: 'text-[#008531]' },
   { id: 'degenvault', label: 'DegenVault.exe', icon: 'wallet', color: 'text-titlebar-navy' },
   { id: 'leaderboard', label: 'Leaderboard.exe', icon: 'trophy', color: 'text-crt-amber' },
   { id: 'connect_wallet', label: 'ConnectWallet.exe', icon: 'zap', color: 'text-[#000080]' },
@@ -49,6 +53,7 @@ export const DesktopCanvas: React.FC = () => {
   const focusWindow = useWindowStore((state) => state.focusWindow);
 
   const isLeaderboardOpen = useWindowStore((state) => state.windows.leaderboard?.isOpen ?? false);
+  const isOrderBookOpen = useWindowStore((state) => state.windows.orderbook?.isOpen ?? false);
   const isFlexCardOpen = useWindowStore((state) => state.windows.flexcard?.isOpen ?? false);
   const isConnectModalOpen = useAuthStore((state) => state.isConnectModalOpen);
   const openConnectModal = useAuthStore((state) => state.openConnectModal);
@@ -141,6 +146,14 @@ export const DesktopCanvas: React.FC = () => {
         <RetroErrorBoundary name="Leaderboard.exe">
           <Suspense fallback={null}>
             <LeaderboardWindow />
+          </Suspense>
+        </RetroErrorBoundary>
+      )}
+
+      {isOrderBookOpen && (
+        <RetroErrorBoundary name="OrderBook.exe">
+          <Suspense fallback={null}>
+            <OrderBookWindow />
           </Suspense>
         </RetroErrorBoundary>
       )}

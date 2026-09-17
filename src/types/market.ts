@@ -21,3 +21,31 @@ export interface CandleData {
 }
 
 export type ConnectionStatus = 'CONNECTING' | 'CONNECTED' | 'RECONNECTING' | 'OFFLINE';
+
+export interface OrderBookLevel {
+  price: number;
+  quantity: number;
+  total: number;
+  depthPercent: number;
+}
+
+export interface TapeTrade {
+  id: string;
+  price: number;
+  quantity: number;
+  time: number;
+  isBuyerMaker: boolean;
+  isWhale: boolean;
+  valueUsd: number;
+}
+
+export interface OrderBookSnapshot {
+  bids: OrderBookLevel[];
+  asks: OrderBookLevel[];
+  spread: number;
+  spreadPercent: number;
+  midPrice: number;
+  bidDepthTotal: number;
+  askDepthTotal: number;
+  imbalanceRatio: number;
+}

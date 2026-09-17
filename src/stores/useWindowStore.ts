@@ -78,6 +78,18 @@ const INITIAL_WINDOWS: Record<WindowId, WindowState> = {
     defaultBounds: { x: 280, y: 60, width: 680, height: 520 },
     zIndex: 36,
   },
+  orderbook: {
+    id: 'orderbook',
+    title: 'OrderBook.exe - Level-2 DOM & Tape Reader',
+    icon: 'layers',
+    isOpen: false,
+    isMinimized: false,
+    isMaximized: false,
+    position: { x: 220, y: 30 },
+    size: { width: 780, height: 560 },
+    defaultBounds: { x: 220, y: 30, width: 780, height: 560 },
+    zIndex: 23,
+  },
 };
 
 export const useWindowStore = create<WindowStoreState>((set, get) => ({

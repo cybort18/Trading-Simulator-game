@@ -20,6 +20,7 @@ import {
   ArrowUp,
   ArrowDown,
   Sparkles,
+  Layers,
 } from 'lucide-react';
 
 interface PixelIconProps {
@@ -70,6 +71,8 @@ export const PixelIcon: React.FC<PixelIconProps> = ({ name, className = '', size
       return <ArrowDown size={size} className={className} />;
     case 'sparkles':
       return <Sparkles size={size} className={className} />;
+    case 'layers':
+      return <Layers size={size} className={className} />;
     default:
       return <Terminal size={size} className={className} />;
   }
