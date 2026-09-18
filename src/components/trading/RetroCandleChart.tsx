@@ -95,10 +95,7 @@ export const RetroCandleChart: React.FC<RetroCandleChartProps> = ({ pair, timefr
     const candleSeries = chart.addSeries(CandlestickSeries, {
       upColor: '#00FF66',
       downColor: '#FF3333',
-      borderVisible: true,
-      borderColor: '#00FF66',
-      borderUpColor: '#00FF66',
-      borderDownColor: '#FF3333',
+      borderVisible: false,
       wickUpColor: '#00FF66',
       wickDownColor: '#FF3333',
       priceFormat: {
