@@ -21,6 +21,8 @@ export const CompactOrderBook: React.FC<CompactOrderBookProps> = ({
   const spreadPercent = useOrderBookStore((state) => state.spreadPercent);
   const imbalanceRatio = useOrderBookStore((state) => state.imbalanceRatio);
   const priceDirection = useOrderBookStore((state) => state.priceDirection);
+  const updateSpeedMs = useOrderBookStore((state) => state.updateSpeedMs);
+  const setUpdateSpeedMs = useOrderBookStore((state) => state.setUpdateSpeedMs);
 
   // Take top N asks and reverse so highest ask is on top and lowest ask sits directly above mid price
   const displayAsks = useMemo(() => {
@@ -60,7 +62,18 @@ export const CompactOrderBook: React.FC<CompactOrderBookProps> = ({
       <div className="flex items-center justify-between border-b border-[#222] pb-1 mb-1 text-[9px] text-[#A0A0A0]">
         <div className="flex items-center space-x-1">
           <span className="font-bold text-white uppercase tracking-tight">Order Book</span>
-          <span className="w-1.5 h-1.5 rounded-full bg-[#00FF66] animate-pulse"></span>
+          <button
+            onClick={() => {
+              soundFXService.playKeyClick();
+              const nextSpeed =
+                updateSpeedMs === 350 ? 500 : updateSpeedMs === 500 ? 1000 : updateSpeedMs === 1000 ? 100 : 350;
+              setUpdateSpeedMs(nextSpeed);
+            }}
+            className="win-btn px-1 py-0 text-[8px] text-[#DDD] bg-[#1A1A1A] hover:text-white"
+            title="Update Speed / Throttle (Click to cycle: 350ms -> 500ms -> 1s -> 100ms)"
+          >
+            {updateSpeedMs >= 1000 ? `${updateSpeedMs / 1000}s` : `${updateSpeedMs}ms`}
+          </button>
         </div>
         <div className="text-right">
           <span className="text-[#888]">Spread: </span>
@@ -88,7 +101,7 @@ export const CompactOrderBook: React.FC<CompactOrderBookProps> = ({
             >
               {/* Depth Visual Bar */}
               <div
-                className="absolute right-0 top-0 bottom-0 bg-red-600/20 pointer-events-none transition-all duration-75"
+                className="absolute right-0 top-0 bottom-0 bg-red-600/20 pointer-events-none transition-all duration-200 ease-out"
                 style={{ width: `${Math.min(100, Math.max(5, ask.depthPercent))}%` }}
               />
               <span className="text-[#FF4444] font-bold relative z-10">
@@ -141,7 +154,7 @@ export const CompactOrderBook: React.FC<CompactOrderBookProps> = ({
             >
               {/* Depth Visual Bar */}
               <div
-                className="absolute right-0 top-0 bottom-0 bg-green-600/20 pointer-events-none transition-all duration-75"
+                className="absolute right-0 top-0 bottom-0 bg-green-600/20 pointer-events-none transition-all duration-200 ease-out"
                 style={{ width: `${Math.min(100, Math.max(5, bid.depthPercent))}%` }}
               />
               <span className="text-[#00FF66] font-bold relative z-10">

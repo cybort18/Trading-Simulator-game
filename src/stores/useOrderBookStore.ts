@@ -16,11 +16,13 @@ interface OrderBookState {
   whaleThresholdUsd: number;
   lastTradePrice: number;
   priceDirection: 'up' | 'down' | 'same';
+  updateSpeedMs: number;
 
   // Actions
   setSelectedPair: (pair: TradingPair) => void;
   setPrecision: (precision: number) => void;
   setDepthLimit: (limit: number) => void;
+  setUpdateSpeedMs: (speedMs: number) => void;
   toggleAudio: () => void;
   setOrderBookData: (rawBids: [string | number, string | number][], rawAsks: [string | number, string | number][]) => void;
   addTrades: (trades: TapeTrade[]) => void;
@@ -50,6 +52,7 @@ export const useOrderBookStore = create<OrderBookState>((set, get) => ({
   whaleThresholdUsd: 25000,
   lastTradePrice: 0,
   priceDirection: 'same',
+  updateSpeedMs: 350,
 
   setSelectedPair: (pair: TradingPair) => {
     const { selectedPair } = get();
@@ -71,6 +74,8 @@ export const useOrderBookStore = create<OrderBookState>((set, get) => ({
   setPrecision: (precision: number) => set({ precision }),
 
   setDepthLimit: (depthLimit: number) => set({ depthLimit }),
+
+  setUpdateSpeedMs: (updateSpeedMs: number) => set({ updateSpeedMs }),
 
   toggleAudio: () => set((state) => ({ isAudioEnabled: !state.isAudioEnabled })),
 

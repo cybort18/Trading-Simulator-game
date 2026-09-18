@@ -31,6 +31,8 @@ export const OrderBookWindow: React.FC = () => {
   const toggleAudio = useOrderBookStore((state) => state.toggleAudio);
   const clearTrades = useOrderBookStore((state) => state.clearTrades);
   const priceDirection = useOrderBookStore((state) => state.priceDirection);
+  const updateSpeedMs = useOrderBookStore((state) => state.updateSpeedMs);
+  const setUpdateSpeedMs = useOrderBookStore((state) => state.setUpdateSpeedMs);
 
   const setGlobalPair = useMarketDataStore((state) => state.setSelectedPair);
 
@@ -156,7 +158,7 @@ export const OrderBookWindow: React.FC = () => {
           <div className="flex items-center space-x-3">
             <span className="font-bold flex items-center space-x-1">
               <span className="w-1.5 h-1.5 rounded-full bg-crt-bullish animate-ping"></span>
-              <span>L2 FEED: BINANCE 100ms</span>
+              <span>L2 FEED: BINANCE ({updateSpeedMs >= 1000 ? `${updateSpeedMs / 1000}s` : `${updateSpeedMs}ms`})</span>
             </span>
             <span>DEPTH: {depthLimit} ROWS</span>
             <span>TAPE: {recentTrades.length} TRADES</span>
@@ -207,6 +209,26 @@ export const OrderBookWindow: React.FC = () => {
                 }`}
               >
                 {prec}
+              </button>
+            ))}
+          </div>
+
+          {/* Speed Throttle Selector */}
+          <div className="flex items-center space-x-1">
+            <span className="font-bold text-[10px] text-black">SPEED:</span>
+            {[100, 350, 500, 1000].map((spd) => (
+              <button
+                key={spd}
+                onClick={() => {
+                  soundFXService.playKeyClick();
+                  setUpdateSpeedMs(spd);
+                }}
+                className={`px-1.5 py-0.5 text-[10px] font-mono ${
+                  updateSpeedMs === spd ? 'win-btn-pressed bg-win-pressed font-bold' : 'win-btn bg-win-base'
+                }`}
+                title={`Set Order Book throttle to ${spd}ms`}
+              >
+                {spd >= 1000 ? `${spd / 1000}s` : `${spd}ms`}
               </button>
             ))}
           </div>

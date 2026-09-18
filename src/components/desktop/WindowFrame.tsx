@@ -47,9 +47,18 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [isMinimizing, setIsMinimizing] = useState(false);
+  const [hasAnimatedOpen, setHasAnimatedOpen] = useState(false);
   const dragOffsetRef = useRef<{ offsetX: number; offsetY: number }>({ offsetX: 0, offsetY: 0 });
   const rafRef = useRef<number | null>(null);
   const pendingPosRef = useRef<{ x: number; y: number } | null>(null);
+
+  // Play open animation once on initial mount/restore, then disable to prevent dragging glitches
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setHasAnimatedOpen(true);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleClose = useCallback(() => {
     if (isClosing) return;
@@ -85,7 +94,11 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
       offsetX: e.clientX - windowState.position.x,
       offsetY: e.clientY - windowState.position.y,
     };
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // Ignore fallback
+    }
   };
 
   const handlePointerMove = useCallback(
@@ -128,7 +141,9 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
         pendingPosRef.current = null;
       }
       try {
-        (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+        if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+          e.currentTarget.releasePointerCapture(e.pointerId);
+        }
       } catch {
         // Ignore if pointer capture already lost
       }
@@ -208,9 +223,9 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
     ? 'animate-win-close'
     : isMinimizing
     ? 'animate-win-minimize'
-    : isDragging
-    ? ''
-    : 'animate-win-open';
+    : !hasAnimatedOpen
+    ? 'animate-win-open'
+    : '';
 
   return (
     <section
@@ -225,6 +240,7 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
         onDoubleClick={() => maximizeWindow(id)}
         className={`h-titlebar-height px-1.5 flex items-center justify-between cursor-move select-none ${
           isActive ? 'titlebar-active' : 'titlebar-inactive'

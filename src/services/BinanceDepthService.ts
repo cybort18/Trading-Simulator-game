@@ -13,6 +13,16 @@ export class BinanceDepthService {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private lastMessageTimestamp = 0;
 
+  // Throttling buffers for calm, readable exchange-level updates
+  private lastDepthFlushTime = 0;
+  private pendingRawBids: [string | number, string | number][] | null = null;
+  private pendingRawAsks: [string | number, string | number][] | null = null;
+  private depthFlushTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private pendingTrades: TapeTrade[] = [];
+  private lastTradeFlushTime = 0;
+  private tradeFlushTimer: ReturnType<typeof setTimeout> | null = null;
+
   private constructor() {}
 
   public static getInstance(): BinanceDepthService {
@@ -42,6 +52,17 @@ export class BinanceDepthService {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
+    if (this.depthFlushTimer) {
+      clearTimeout(this.depthFlushTimer);
+      this.depthFlushTimer = null;
+    }
+    if (this.tradeFlushTimer) {
+      clearTimeout(this.tradeFlushTimer);
+      this.tradeFlushTimer = null;
+    }
+    this.pendingRawBids = null;
+    this.pendingRawAsks = null;
+    this.pendingTrades = [];
     if (this.socket) {
       this.socket.onopen = null;
       this.socket.onmessage = null;
@@ -132,16 +153,16 @@ export class BinanceDepthService {
       const stream: string = payload.stream || '';
       const data = payload.data;
 
-      // 1. Partial Depth 20 Levels
+      // 1. Partial Depth 20 Levels (Throttled for human-readable exchange experience)
       if (stream.includes('@depth20')) {
         const bids: [string, string][] = data.bids || [];
         const asks: [string, string][] = data.asks || [];
         if (bids.length > 0 || asks.length > 0) {
-          useOrderBookStore.getState().setOrderBookData(bids, asks);
+          this.queueDepthUpdate(bids, asks);
         }
       }
 
-      // 2. Aggregate Trades (Time & Sales Tape)
+      // 2. Aggregate Trades (Time & Sales Tape - Batched smoothly)
       else if (stream.includes('@aggTrade')) {
         const price = parseFloat(data.p);
         const quantity = parseFloat(data.q);
@@ -161,16 +182,83 @@ export class BinanceDepthService {
             valueUsd,
           };
 
-          useOrderBookStore.getState().addTrades([trade]);
-
-          // Optional subtle acoustic click if user enabled audio on tape
-          if (useOrderBookStore.getState().isAudioEnabled) {
-            soundFXService.playKeyClick();
-          }
+          this.queueTrade(trade);
         }
       }
     } catch {
       // Ignored malformed frames
+    }
+  }
+
+  /**
+   * Buffers depth updates and flushes to store at human-readable exchange speed.
+   */
+  private queueDepthUpdate(
+    bids: [string | number, string | number][],
+    asks: [string | number, string | number][]
+  ): void {
+    this.pendingRawBids = bids;
+    this.pendingRawAsks = asks;
+
+    const throttle = useOrderBookStore.getState().updateSpeedMs || 350;
+    const now = Date.now();
+    const elapsed = now - this.lastDepthFlushTime;
+
+    if (elapsed >= throttle) {
+      this.flushDepthUpdate();
+    } else if (!this.depthFlushTimer) {
+      this.depthFlushTimer = setTimeout(() => {
+        this.depthFlushTimer = null;
+        this.flushDepthUpdate();
+      }, Math.max(10, throttle - elapsed));
+    }
+  }
+
+  private flushDepthUpdate(): void {
+    if (this.depthFlushTimer) {
+      clearTimeout(this.depthFlushTimer);
+      this.depthFlushTimer = null;
+    }
+    this.lastDepthFlushTime = Date.now();
+    if (this.pendingRawBids && this.pendingRawAsks) {
+      useOrderBookStore.getState().setOrderBookData(this.pendingRawBids, this.pendingRawAsks);
+    }
+  }
+
+  /**
+   * Batches incoming trade ticks to prevent rapid text vibration on high-volume pairs.
+   */
+  private queueTrade(trade: TapeTrade): void {
+    this.pendingTrades.push(trade);
+
+    const now = Date.now();
+    const elapsed = now - this.lastTradeFlushTime;
+    const tradeThrottle = 250;
+
+    if (elapsed >= tradeThrottle) {
+      this.flushTrades();
+    } else if (!this.tradeFlushTimer) {
+      this.tradeFlushTimer = setTimeout(() => {
+        this.tradeFlushTimer = null;
+        this.flushTrades();
+      }, Math.max(10, tradeThrottle - elapsed));
+    }
+  }
+
+  private flushTrades(): void {
+    if (this.tradeFlushTimer) {
+      clearTimeout(this.tradeFlushTimer);
+      this.tradeFlushTimer = null;
+    }
+    this.lastTradeFlushTime = Date.now();
+    if (this.pendingTrades.length > 0) {
+      const batch = [...this.pendingTrades];
+      this.pendingTrades = [];
+      useOrderBookStore.getState().addTrades(batch);
+
+      if (useOrderBookStore.getState().isAudioEnabled) {
+        soundFXService.playKeyClick();
+      }
     }
   }
 
@@ -212,12 +300,12 @@ export class BinanceDepthService {
     this.simulationTimer = setInterval(() => {
       if (!this.isActive) return;
       this.generateSimulatedDepth();
-    }, 200);
+    }, 400);
 
     this.tradeSimulationTimer = setInterval(() => {
       if (!this.isActive) return;
       this.generateSimulatedTrade();
-    }, 1100);
+    }, 1800);
   }
 
   private clearSimulation(): void {

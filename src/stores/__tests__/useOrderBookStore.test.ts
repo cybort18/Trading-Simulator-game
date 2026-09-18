@@ -152,4 +152,15 @@ describe('useOrderBookStore Level-2 DOM & Tape Reader State', () => {
     store.toggleAudio();
     expect(useOrderBookStore.getState().isAudioEnabled).toBe(false);
   });
+
+  it('correctly updates and configures updateSpeedMs throttle', () => {
+    const store = useOrderBookStore.getState();
+    expect(store.updateSpeedMs).toBe(350);
+
+    store.setUpdateSpeedMs(500);
+    expect(useOrderBookStore.getState().updateSpeedMs).toBe(500);
+
+    store.setUpdateSpeedMs(1000);
+    expect(useOrderBookStore.getState().updateSpeedMs).toBe(1000);
+  });
 });
