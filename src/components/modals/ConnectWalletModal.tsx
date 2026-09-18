@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { Web3AuthService } from '@/services/Web3AuthService';
 import { soundFXService } from '@/services/SoundFXService';
 import { isSupabaseConfigured } from '@/lib/supabaseClient';
+import { PixelIcon } from '@/components/common/PixelIcon';
 
 export const ConnectWalletModal: React.FC = () => {
   const isConnectModalOpen = useAuthStore((state) => state.isConnectModalOpen);
@@ -86,7 +87,7 @@ export const ConnectWalletModal: React.FC = () => {
         {/* Title Bar */}
         <div className="h-6 bg-titlebar-navy text-white flex items-center justify-between px-1.5 py-0.5 select-none">
           <div className="flex items-center space-x-1.5 min-w-0">
-            <span className="text-[13px]">🌐</span>
+            <PixelIcon name="network" size={14} className="text-white flex-shrink-0" />
             <span className="font-headline font-bold text-[12px] truncate">
               Dial-Up Networking - Web3 Cryptographic Adapter
             </span>
@@ -106,8 +107,12 @@ export const ConnectWalletModal: React.FC = () => {
         <div className="p-3 flex flex-col gap-3 text-black text-[11px]">
           {/* Header Description & Hardware Icon */}
           <div className="flex items-center space-x-3 bg-white p-2.5 win-inset">
-            <div className="w-10 h-10 win-inset bg-[#E0E0E0] flex items-center justify-center flex-shrink-0 text-[24px]">
-              {isConnected ? '⚡' : isConnecting ? '📡' : '📠'}
+            <div className="w-10 h-10 win-inset bg-[#E0E0E0] flex items-center justify-center flex-shrink-0">
+              <PixelIcon
+                name={isConnected ? 'check' : isConnecting ? 'radio' : 'network'}
+                size={22}
+                className={isConnected ? 'text-[#008531]' : isConnecting ? 'text-titlebar-navy animate-pulse' : 'text-[#555]'}
+              />
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-headline font-bold text-[13px] text-black">
@@ -140,7 +145,7 @@ export const ConnectWalletModal: React.FC = () => {
           {/* Connected Profile Details or Error Message */}
           {error && (
             <div className="bg-[#FFF4E5] border-2 border-[#FFAA00] p-2 flex items-start space-x-2 text-[#805000]">
-              <span className="text-[16px] leading-none">⚠️</span>
+              <PixelIcon name="warning" size={16} className="text-[#805000] flex-shrink-0 mt-0.5" />
               <div className="flex-1 text-[10px] font-mono">
                 <strong className="block text-[11px] font-bold">Authentication Exception:</strong>
                 {error}

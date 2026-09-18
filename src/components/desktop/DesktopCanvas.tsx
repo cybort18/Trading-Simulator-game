@@ -1,4 +1,4 @@
-import React, { useState, Suspense } from 'react';
+import React, { Suspense } from 'react';
 import { useWindowStore } from '@/stores/useWindowStore';
 import { WindowId } from '@/types/window';
 import { PixelIcon } from '@/components/common/PixelIcon';
@@ -42,14 +42,13 @@ const DESKTOP_ICONS: DesktopIconConfig[] = [
   { id: 'turbotrade', label: 'TurboTrade.exe', icon: 'candlestick', color: 'text-titlebar-navy' },
   { id: 'orderbook', label: 'OrderBook.exe', icon: 'layers', color: 'text-[#008531]' },
   { id: 'degenvault', label: 'DegenVault.exe', icon: 'wallet', color: 'text-titlebar-navy' },
-  { id: 'leaderboard', label: 'Leaderboard.exe', icon: 'trophy', color: 'text-crt-amber' },
-  { id: 'connect_wallet', label: 'ConnectWallet.exe', icon: 'zap', color: 'text-[#000080]' },
-  { id: 'flexcard', label: 'ShareFlexCard.exe', icon: 'camera', color: 'text-[#555]' },
-  { id: 'recycle_bin', label: 'Recycle Bin', icon: 'trash', color: 'text-[#666]' },
+  { id: 'leaderboard', label: 'Leaderboard.exe', icon: 'trophy', color: 'text-[#b45309]' },
+  { id: 'connect_wallet', label: 'ConnectWallet.exe', icon: 'wallet', color: 'text-[#000080]' },
+  { id: 'flexcard', label: 'ShareFlexCard.exe', icon: 'camera', color: 'text-[#444]' },
+  { id: 'recycle_bin', label: 'Recycle Bin', icon: 'trash', color: 'text-[#555]' },
 ];
 
 export const DesktopCanvas: React.FC = () => {
-  const [selectedIcon, setSelectedIcon] = useState<string | null>(null);
   const openWindow = useWindowStore((state) => state.openWindow);
   const focusWindow = useWindowStore((state) => state.focusWindow);
 
@@ -67,12 +66,8 @@ export const DesktopCanvas: React.FC = () => {
     ? Web3AuthService.getAddressPalette(walletAddress)
     : { primary: '#000080', secondary: '#008531', accent: '#FFAA00' };
 
-  const handleIconClick = (e: React.MouseEvent, id: WindowId | 'recycle_bin' | 'connect_wallet') => {
-    e.stopPropagation();
-    setSelectedIcon(id);
-  };
-
-  const handleIconDoubleClick = (id: WindowId | 'recycle_bin' | 'connect_wallet') => {
+  const handleLaunchApp = (id: WindowId | 'recycle_bin' | 'connect_wallet') => {
+    soundFXService.playKeyClick();
     if (id === 'recycle_bin') {
       alert('Recycle Bin: 0 liquidated accounts in trash.');
       return;
@@ -87,7 +82,6 @@ export const DesktopCanvas: React.FC = () => {
 
   return (
     <div
-      onMouseDown={() => setSelectedIcon(null)}
       onClickCapture={(e) => {
         const target = e.target as HTMLElement | null;
         if (target && target.closest('button, .win-btn, .win-outset, input[type="range"]')) {
@@ -97,122 +91,90 @@ export const DesktopCanvas: React.FC = () => {
       className="relative w-screen h-screen bg-desktop-teal overflow-hidden select-none font-ui"
     >
       {/* =================================================================== */}
-      {/* TOP-RIGHT FLOATING WALLET ACTION CHIP (High Visibility Header)     */}
+      {/* TOP-RIGHT WALLET ACTION BUTTON (Authentic Retro Windows 98 Style)  */}
       {/* =================================================================== */}
-      <div className="fixed top-2.5 right-3 z-40 flex items-center space-x-2 select-none font-ui">
+      <div className="fixed top-2.5 right-3 z-40 flex items-center select-none font-ui">
         <button
           onClick={(e) => {
             e.stopPropagation();
             soundFXService.playKeyClick();
             openConnectModal();
           }}
-          className={`win-btn win-outset px-2.5 py-1.5 flex items-center space-x-2 shadow-xl cursor-pointer group active:translate-x-0.5 active:translate-y-0.5 ${
-            isConnected
-              ? 'bg-win-base hover:bg-win-pressed'
-              : 'bg-win-base hover:bg-[#D5D5D5] border-2 border-bevel-highlight ring-1 ring-bevel-dark'
-          }`}
+          className="win-btn win-outset px-2.5 py-1.5 flex items-center space-x-2 bg-win-base hover:bg-[#d8d8d8] active:win-inset active:translate-x-0.5 active:translate-y-0.5 shadow-md cursor-pointer transition-colors"
           title={
             isConnected && walletAddress
               ? `Connected: ${walletAddress}\nClick to view profile or disconnect.`
-              : 'Guest Mode: Progress is not saved to cloud.\nClick to connect Web3 wallet!'
+              : 'Connect Web3 Wallet (Guest Mode)'
           }
         >
           {isConnected && walletAddress ? (
             <>
-              {/* Connected Blockie Pixel Box */}
+              {/* Deterministic Pixel Blockie */}
               <div
-                className="w-5 h-5 win-inset flex items-center justify-center font-mono font-bold text-white text-[9px] shadow-sm flex-shrink-0"
-                style={{ backgroundColor: palette.primary, borderColor: palette.accent }}
+                className="w-4 h-4 win-inset flex items-center justify-center font-mono font-bold text-white text-[9px] shadow-sm flex-shrink-0"
+                style={{ backgroundColor: palette.primary }}
               >
                 {walletAddress.substring(2, 4).toUpperCase()}
               </div>
 
               {/* Username / Truncated Address */}
-              <div className="flex flex-col text-left leading-tight">
-                <span className="font-bold text-[11px] text-black group-hover:text-titlebar-navy">
-                  {username || Web3AuthService.truncateAddress(walletAddress)}
-                </span>
-                <span className="text-[9px] text-[#555] font-mono">
-                  {Web3AuthService.truncateAddress(walletAddress)}
-                </span>
-              </div>
+              <span className="font-bold text-[11px] text-black tracking-tight">
+                {username || Web3AuthService.truncateAddress(walletAddress)}
+              </span>
 
-              {/* Verified Online Status Chip */}
-              <div className="win-inset bg-[#0a1a0e] px-1.5 py-0.5 flex items-center space-x-1 font-mono text-[9px]">
-                <span className="w-2 h-2 rounded-full bg-crt-bullish animate-pulse"></span>
-                <span className="text-[#00FF66] font-bold">ONLINE</span>
-              </div>
+              {/* Clean Online Status Tag */}
+              <span className="text-[9px] font-mono px-1.5 py-0.5 win-inset bg-[#e6f4ea] text-[#006622] font-bold">
+                ONLINE
+              </span>
             </>
           ) : (
             <>
-              {/* Disconnected / Guest Icon */}
-              <div className="w-5 h-5 win-inset bg-titlebar-navy flex items-center justify-center text-white text-[10px] font-bold shadow-sm flex-shrink-0">
-                ⚡
-              </div>
+              {/* Clean Lucide Vector Icon */}
+              <PixelIcon name="wallet" size={15} className="text-titlebar-navy flex-shrink-0" />
 
-              {/* Call-to-Action Text */}
-              <div className="flex flex-col text-left leading-tight">
-                <span className="font-bold text-[11px] text-black group-hover:text-titlebar-navy flex items-center space-x-1">
-                  <span>Connect Wallet</span>
-                  <span className="text-[9px] text-titlebar-navy">►</span>
-                </span>
-                <span className="text-[9px] text-crt-amber font-bold font-mono">
-                  SAVE PROGRESS
-                </span>
-              </div>
+              {/* High-Contrast Crisp Black Label */}
+              <span className="font-bold text-[11px] text-black tracking-tight">
+                Connect Wallet
+              </span>
 
-              {/* Guest Indicator Chip */}
-              <div className="win-inset bg-[#1a140a] px-1.5 py-0.5 flex items-center space-x-1 font-mono text-[9px]">
-                <span className="w-2 h-2 rounded-full bg-crt-amber animate-pulse"></span>
-                <span className="text-amber-400 font-bold">GUEST</span>
-              </div>
+              {/* Clean Sunken Bevel Guest Status Pill */}
+              <span className="text-[9px] font-mono px-1.5 py-0.5 win-inset bg-[#d0d0d0] text-[#444444] font-semibold">
+                Guest
+              </span>
             </>
           )}
         </button>
       </div>
 
       {/* =================================================================== */}
-      {/* DESKTOP ICONS GRID (Left Dock)                                      */}
+      {/* DESKTOP ICONS GRID (Left Dock with Single-Click Launch & Tactile Press) */}
       {/* =================================================================== */}
-      <div className="absolute left-3 top-3 flex flex-col gap-4 z-10 w-24">
-        {DESKTOP_ICONS.map((item) => {
-          const isSelected = selectedIcon === item.id;
-
-          return (
-            <div
-              key={item.id}
-              onClick={(e) => handleIconClick(e, item.id)}
-              onDoubleClick={() => handleIconDoubleClick(item.id)}
-              className="flex flex-col items-center group cursor-pointer w-20 py-1"
-            >
-              {/* 3D Outset Icon Box */}
-              <div
-                className={`w-10 h-10 flex items-center justify-center mb-1 ${
-                  isSelected
-                    ? 'win-inset bg-titlebar-navy outline outline-1 outline-dotted outline-white'
-                    : 'win-outset bg-win-base group-hover:brightness-110'
-                }`}
-              >
-                <PixelIcon
-                  name={item.icon}
-                  size={24}
-                  className={isSelected ? 'text-white' : item.color}
-                />
-              </div>
-
-              {/* Icon Label */}
-              <span
-                className={`text-[10px] text-center px-1 leading-tight tracking-normal ${
-                  isSelected
-                    ? 'bg-titlebar-navy text-white border border-dotted border-white'
-                    : 'text-white drop-shadow-[1px_1px_1px_#000]'
-                }`}
-              >
-                {item.label}
-              </span>
+      <div className="absolute left-3 top-3 flex flex-col gap-3.5 z-10 w-24">
+        {DESKTOP_ICONS.map((item) => (
+          <button
+            key={item.id}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleLaunchApp(item.id);
+            }}
+            className="flex flex-col items-center group cursor-pointer w-20 py-1 focus:outline-none select-none transition-transform active:translate-x-0.5 active:translate-y-0.5 active:scale-95"
+            title={`Launch ${item.label}`}
+          >
+            {/* 3D Outset Icon Box with Tactile Bevel Press on Click */}
+            <div className="w-10 h-10 flex items-center justify-center mb-1 win-outset bg-win-base group-hover:bg-[#dcdcdc] group-active:win-inset group-active:bg-[#b0b0b0] shadow-sm transition-colors">
+              <PixelIcon
+                name={item.icon}
+                size={22}
+                className={`${item.color} group-hover:scale-105 group-active:scale-95 transition-transform`}
+              />
             </div>
-          );
-        })}
+
+            {/* Clean Icon Label - Crisp drop-shadow, no dotted selection box */}
+            <span className="text-[11px] text-center px-1 leading-tight tracking-normal text-white font-medium drop-shadow-[1px_1px_2px_#000000] group-hover:text-amber-200 transition-colors">
+              {item.label}
+            </span>
+          </button>
+        ))}
       </div>
 
       {/* =================================================================== */}
