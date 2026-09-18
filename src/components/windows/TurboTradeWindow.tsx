@@ -377,16 +377,16 @@ export const TurboTradeWindow: React.FC = () => {
           {/* =================================================================== */}
           {/* LEFT PANEL: Market Selector, Live Metrics & 24h Range Meter        */}
           {/* =================================================================== */}
-          <div className="w-full md:w-[195px] flex flex-col gap-1 flex-shrink-0">
+          <div className="w-full md:w-[172px] flex flex-col gap-1 flex-shrink-0">
             {/* Pair Selector Strip */}
             <div className="win-inset bg-win-base p-1 flex flex-col gap-1">
-              <div className="font-bold text-[10px] text-black uppercase">Select Contract:</div>
+              <div className="font-bold text-[9.5px] text-black uppercase">Select Contract:</div>
               <div className="grid grid-cols-3 gap-1">
                 {(['BTCUSDT', 'ETHUSDT', 'SOLUSDT'] as const).map((pair) => (
                   <button
                     key={pair}
                     onClick={() => setSelectedPair(pair)}
-                    className={`py-1 text-[10px] font-bold ${
+                    className={`py-0.5 text-[9.5px] font-bold ${
                       selectedPair === pair
                         ? 'win-btn-pressed bg-win-pressed font-extrabold text-titlebar-navy'
                         : 'win-btn bg-win-base text-black'
@@ -399,17 +399,17 @@ export const TurboTradeWindow: React.FC = () => {
             </div>
 
             {/* Real-time Live Ticker Card */}
-            <div className="win-inset-deep p-2 text-white flex flex-col gap-1.5 crt-grid bg-[#121212]">
-              <div className="flex justify-between items-center text-[10px] text-[#E0E0E0]">
+            <div className="win-inset-deep p-1.5 text-white flex flex-col gap-1 crt-grid bg-[#121212]">
+              <div className="flex justify-between items-center text-[9.5px] text-[#E0E0E0]">
                 <span className="font-bold font-mono text-white">{pairLabelMap[selectedPair]} PERP</span>
-                <span className="win-inset px-1 bg-[#1A1A1A] text-crt-bullish text-[9px] font-mono font-bold">
+                <span className="win-inset px-1 bg-[#1A1A1A] text-crt-bullish text-[8.5px] font-mono font-bold">
                   {connectionStatus === 'CONNECTED' ? 'LIVE ●' : connectionStatus}
                 </span>
               </div>
 
               {/* Dynamic Tick Color Flash Monospace Price Readout */}
               <div
-                className={`font-mono text-[20px] font-bold leading-none transition-colors duration-150 ${
+                className={`font-mono text-[17px] font-bold leading-none transition-colors duration-150 ${
                   direction === 'up'
                     ? 'text-crt-bullish crt-glow-green'
                     : direction === 'down'
@@ -424,7 +424,7 @@ export const TurboTradeWindow: React.FC = () => {
                 })}
               </div>
 
-              <div className="flex items-center justify-between text-[10.5px] font-mono">
+              <div className="flex items-center justify-between text-[9.5px] font-mono">
                 <span className="text-[#E0E0E0] font-semibold">24h Change:</span>
                 <span
                   className={`font-bold ${
@@ -436,7 +436,7 @@ export const TurboTradeWindow: React.FC = () => {
                 </span>
               </div>
 
-              <div className="border-t border-[#333] pt-1 flex flex-col gap-0.5 text-[9.5px] font-mono text-[#D0D0D0]">
+              <div className="border-t border-[#333] pt-0.5 flex flex-col gap-0.5 text-[9px] font-mono text-[#D0D0D0]">
                 <div className="flex justify-between">
                   <span className="text-[#D0D0D0]">24h High:</span>
                   <span className="text-white font-bold">${currentTicker.high24h.toFixed(2)}</span>
@@ -452,7 +452,7 @@ export const TurboTradeWindow: React.FC = () => {
                   </span>
                 </div>
                 <div className="flex justify-between border-t border-[#2A2A2A] pt-0.5 mt-0.5">
-                  <span className="text-[#D0D0D0]">Funding Rate:</span>
+                  <span className="text-[#D0D0D0]">Funding:</span>
                   <span className="text-crt-amber font-bold">
                     {(currentTicker.fundingRate * 100).toFixed(4)}% in {fundingCountdown}
                   </span>
@@ -461,7 +461,7 @@ export const TurboTradeWindow: React.FC = () => {
             </div>
 
             {/* Account Margin Inset */}
-            <div className="win-inset bg-win-base p-1.5 flex flex-col gap-1 text-[9.5px]">
+            <div className="win-inset bg-win-base p-1 flex flex-col gap-0.5 text-[9px]">
               <div className="flex justify-between">
                 <span className="text-black font-bold">Account Equity:</span>
                 <span className="font-mono font-bold text-titlebar-navy">{equity.toFixed(2)} USDT</span>
@@ -477,11 +477,11 @@ export const TurboTradeWindow: React.FC = () => {
             </div>
 
             {/* 24h High/Low Range Meter & Market Statistics (Utilizes empty space) */}
-            <div className="win-inset-deep bg-[#121212] p-1.5 flex-1 flex flex-col justify-between text-[9px] font-mono text-[#AAA]">
-              <div className="flex flex-col gap-1">
+            <div className="win-inset-deep bg-[#121212] p-1 flex-1 flex flex-col justify-between text-[8.5px] font-mono text-[#AAA]">
+              <div className="flex flex-col gap-0.5">
                 <div className="flex justify-between items-center text-[#DDD] font-bold border-b border-[#252525] pb-0.5">
                   <span>24H PRICE RANGE</span>
-                  <span className="text-[8px] text-crt-bullish">DYNAMIC</span>
+                  <span className="text-[7.5px] text-crt-bullish">DYNAMIC</span>
                 </div>
                 <div className="flex justify-between text-[8.5px]">
                   <span className="text-[#FF4444]">${currentTicker.low24h.toFixed(1)}</span>
@@ -600,7 +600,7 @@ export const TurboTradeWindow: React.FC = () => {
           {/* =================================================================== */}
           {/* COLUMN 3: Real-Time Level-2 Order Book (Gate.io-Style Integration)  */}
           {/* =================================================================== */}
-          <div className="w-full md:w-[185px] flex flex-col flex-shrink-0">
+          <div className="w-full md:w-[165px] flex flex-col flex-shrink-0">
             <CompactOrderBook
               onSelectPrice={handleOrderBookPriceSelect}
               className="flex-1 h-full"
@@ -608,14 +608,14 @@ export const TurboTradeWindow: React.FC = () => {
           </div>
 
         {/* =================================================================== */}
-        {/* RIGHT PANEL: Order Execution Form (25%)                             */}
+        {/* RIGHT PANEL: Order Execution Form (Compact & Non-Clipping)          */}
         {/* =================================================================== */}
-        <div className="w-full md:w-[240px] win-outset bg-win-base p-1.5 flex flex-col gap-2 flex-shrink-0">
+        <div className="w-full md:w-[205px] win-outset bg-win-base p-1 flex flex-col gap-0.5 flex-shrink-0 overflow-y-auto scrollbar-thin">
           {/* Market / Limit Order Toggle */}
-          <div className="grid grid-cols-2 gap-1 font-bold text-[10px]">
+          <div className="grid grid-cols-2 gap-1 font-bold text-[9.5px]">
             <button
               onClick={() => setOrderType('market')}
-              className={`py-1 ${
+              className={`py-0.5 ${
                 orderType === 'market' ? 'win-btn-pressed bg-win-pressed font-extrabold text-titlebar-navy' : 'win-btn'
               }`}
             >
@@ -628,7 +628,7 @@ export const TurboTradeWindow: React.FC = () => {
                   setLimitPriceInput(currentPrice.toFixed(2));
                 }
               }}
-              className={`py-1 ${
+              className={`py-0.5 ${
                 orderType === 'limit' ? 'win-btn-pressed bg-win-pressed font-extrabold text-titlebar-navy' : 'win-btn'
               }`}
             >
@@ -638,15 +638,15 @@ export const TurboTradeWindow: React.FC = () => {
 
           {/* Dynamic Limit Price Input (Shown only when Limit order is selected) */}
           {orderType === 'limit' && (
-            <div className="flex flex-col gap-1 text-[10px] win-inset bg-surface-low p-1.5 border border-titlebar-navy">
+            <div className="flex flex-col gap-0.5 text-[9px] win-inset bg-surface-low p-1 border border-titlebar-navy">
               <div className="flex justify-between items-center">
-                <span className="font-bold text-titlebar-navy">Limit Order Price:</span>
+                <span className="font-bold text-titlebar-navy">Limit Price:</span>
                 <button
                   type="button"
                   onClick={() => setLimitPriceInput(currentPrice.toFixed(2))}
-                  className="win-btn px-1 text-[8px] font-bold"
+                  className="win-btn px-1 text-[7.5px] font-bold"
                 >
-                  Use Mark
+                  Mark
                 </button>
               </div>
               <div className="win-inset-deep bg-white flex items-center px-1.5 py-0.5">
@@ -659,20 +659,20 @@ export const TurboTradeWindow: React.FC = () => {
                     setOrderError(null);
                   }}
                   placeholder={currentPrice.toFixed(2)}
-                  className="w-full bg-transparent font-mono text-[13px] font-bold text-black border-none outline-none p-0"
+                  className="w-full bg-transparent font-mono text-[11px] font-bold text-black border-none outline-none p-0"
                 />
-                <span className="font-bold text-[#333] text-[10px]">USDT</span>
+                <span className="font-bold text-[#333] text-[9px]">USDT</span>
               </div>
             </div>
           )}
 
           {/* Margin Mode Selector */}
-          <div className="win-inset bg-surface-low p-1 flex items-center justify-between text-[10px]">
-            <span className="font-bold text-bevel-dark">Margin Mode:</span>
+          <div className="win-inset bg-surface-low px-1.5 py-0.5 flex items-center justify-between text-[9px]">
+            <span className="font-bold text-bevel-dark">Mode:</span>
             <div className="flex space-x-1">
               <button
                 onClick={() => setMarginMode('cross')}
-                className={`px-1.5 py-0.5 font-bold ${
+                className={`px-1.5 py-0.5 font-bold text-[8.5px] ${
                   marginMode === 'cross' ? 'win-btn-pressed bg-win-pressed font-extrabold text-titlebar-navy' : 'win-btn'
                 }`}
               >
@@ -680,7 +680,7 @@ export const TurboTradeWindow: React.FC = () => {
               </button>
               <button
                 onClick={() => setMarginMode('isolated')}
-                className={`px-1.5 py-0.5 font-bold ${
+                className={`px-1.5 py-0.5 font-bold text-[8.5px] ${
                   marginMode === 'isolated' ? 'win-btn-pressed bg-win-pressed font-extrabold text-titlebar-navy' : 'win-btn'
                 }`}
               >
@@ -690,12 +690,19 @@ export const TurboTradeWindow: React.FC = () => {
           </div>
 
           {/* Leverage Stepper / Slider with Discrete Snap Points */}
-          <div className="win-inset bg-surface-low p-1.5 flex flex-col gap-1.5 text-[10px]">
+          <div className="win-inset bg-surface-low p-1 flex flex-col gap-1 text-[9px]">
             <div className="flex justify-between items-center font-bold">
               <span>Leverage:</span>
-              <span className="font-mono text-titlebar-navy text-[12px] font-extrabold">
-                {leverage}x Multiplier
-              </span>
+              <div className="flex items-center space-x-1">
+                {leverage >= 20 && (
+                  <span className="text-[8px] text-[#A66000] font-bold bg-[#FFF3CD] px-1 border border-[#FFAA00]">
+                    ⚠ High Risk
+                  </span>
+                )}
+                <span className="font-mono text-titlebar-navy text-[11px] font-extrabold">
+                  {leverage}x
+                </span>
+              </div>
             </div>
 
             <input
@@ -711,7 +718,7 @@ export const TurboTradeWindow: React.FC = () => {
                   soundFXService.playLeverageWarning();
                 }
               }}
-              className="w-full h-3 cursor-ew-resize accent-titlebar-navy"
+              className="w-full h-2 cursor-ew-resize accent-titlebar-navy"
             />
 
             {/* Discrete Snap Buttons */}
@@ -728,7 +735,7 @@ export const TurboTradeWindow: React.FC = () => {
                       soundFXService.playKeyClick();
                     }
                   }}
-                  className={`py-0.5 text-[8.5px] font-bold ${
+                  className={`py-0.5 text-[8px] font-bold ${
                     leverage === val
                       ? 'win-btn-pressed bg-win-pressed text-titlebar-navy font-extrabold'
                       : 'win-btn bg-win-base text-black'
@@ -738,21 +745,14 @@ export const TurboTradeWindow: React.FC = () => {
                 </button>
               ))}
             </div>
-
-            {leverage >= 20 && (
-              <div className="bg-[#FFF3CD] text-[#7A4B00] text-[9px] font-bold p-1 border border-[#FFAA00] flex items-center gap-1.5">
-                <PixelIcon name="warning" size={12} className="flex-shrink-0 text-[#7A4B00]" />
-                <span>Warning: {leverage}x High Liquidation Risk</span>
-              </div>
-            )}
           </div>
 
           {/* Order Margin / Size Slider & Input */}
-          <div className="win-inset bg-surface-low p-1.5 flex flex-col gap-1.5 text-[10px]">
+          <div className="win-inset bg-surface-low p-1 flex flex-col gap-1 text-[9px]">
             <div className="flex justify-between items-center font-bold">
               <span className="text-black">Order Margin:</span>
-              <span className="font-mono text-black font-semibold text-[9.5px]">
-                Avail: ${availableMargin.toFixed(2)} USDT
+              <span className="font-mono text-black font-semibold text-[8.5px]">
+                Avail: ${availableMargin.toFixed(2)}
               </span>
             </div>
 
@@ -764,13 +764,13 @@ export const TurboTradeWindow: React.FC = () => {
                   setOrderSize(e.target.value);
                   setOrderError(null);
                 }}
-                className="w-full bg-transparent font-mono text-[14px] font-bold text-black border-none outline-none p-0"
+                className="w-full bg-transparent font-mono text-[12px] font-bold text-black border-none outline-none p-0"
               />
-              <span className="font-bold text-[#333] text-[11px] ml-1">USDT</span>
+              <span className="font-bold text-[#333] text-[9.5px] ml-1">USDT</span>
             </div>
 
             {/* Margin Slider */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
               <input
                 type="range"
                 min="0"
@@ -791,15 +791,15 @@ export const TurboTradeWindow: React.FC = () => {
                     setOrderSize(margin);
                   }
                 }}
-                className="w-full h-3 cursor-ew-resize accent-titlebar-navy disabled:opacity-50"
+                className="w-full h-2 cursor-ew-resize accent-titlebar-navy disabled:opacity-50"
               />
-              <span className="font-mono text-[10px] font-bold text-titlebar-navy w-9 text-right flex-shrink-0">
+              <span className="font-mono text-[9px] font-bold text-titlebar-navy w-7 text-right flex-shrink-0">
                 {currentMarginPercent}%
               </span>
             </div>
 
             {/* Percentage Preset Buttons */}
-            <div className="grid grid-cols-4 gap-1 text-[10px]">
+            <div className="grid grid-cols-4 gap-0.5 text-[8.5px]">
               {['25%', '50%', '75%', 'MAX'].map((pct) => {
                 const targetPct = pct === '25%' ? 25 : pct === '50%' ? 50 : pct === '75%' ? 75 : 98;
                 const isSelected =
@@ -819,12 +819,11 @@ export const TurboTradeWindow: React.FC = () => {
                       if (pct === '50%') setOrderSize((availableMargin * 0.50).toFixed(2));
                       if (pct === '75%') setOrderSize((availableMargin * 0.75).toFixed(2));
                       if (pct === 'MAX') {
-                        // Max available leaving fee buffer
                         const maxMargin = Math.max(0, availableMargin * 0.98);
                         setOrderSize(maxMargin.toFixed(2));
                       }
                     }}
-                    className={`py-0.5 text-center font-bold text-[9px] ${
+                    className={`py-0.5 text-center font-bold text-[8.5px] ${
                       isSelected
                         ? 'win-btn-pressed bg-win-pressed text-titlebar-navy font-extrabold'
                         : 'win-btn bg-win-base text-black'
@@ -838,29 +837,29 @@ export const TurboTradeWindow: React.FC = () => {
           </div>
 
           {/* Pre-trade Take Profit & Stop Loss (Optional) */}
-          <div className="win-inset bg-win-base p-1.5 flex flex-col gap-1 text-[10px]">
+          <div className="win-inset bg-win-base px-1.5 py-1 flex flex-col gap-0.5 text-[9px]">
             <div className="flex items-center justify-between">
-              <label className="flex items-center space-x-1.5 cursor-pointer font-bold text-black select-none">
+              <label className="flex items-center space-x-1 cursor-pointer font-bold text-black select-none">
                 <input
                   type="checkbox"
                   checked={enablePreTradeTpSl}
                   onChange={(e) => setEnablePreTradeTpSl(e.target.checked)}
-                  className="w-3.5 h-3.5 accent-titlebar-navy cursor-pointer"
+                  className="w-3 h-3 accent-titlebar-navy cursor-pointer"
                 />
                 <span>Set TP / SL Targets</span>
               </label>
               {enablePreTradeTpSl && (
-                <span className="text-[8.5px] text-[#555] font-mono">[OPTIONAL]</span>
+                <span className="text-[7.5px] text-[#555] font-mono">[OPT]</span>
               )}
             </div>
 
             {enablePreTradeTpSl && (
-              <div className="flex flex-col gap-1.5 pt-1 border-t border-[#BBB]">
+              <div className="flex flex-col gap-1 pt-1 border-t border-[#BBB]">
                 {/* Pre-trade TP Input */}
                 <div>
-                  <div className="flex justify-between items-center text-[9px] text-black font-bold mb-0.5">
-                    <span className="text-[#008531]">Take Profit (TP):</span>
-                    <div className="flex space-x-1">
+                  <div className="flex justify-between items-center text-[8.5px] text-black font-bold mb-0.5">
+                    <span className="text-[#008531]">Take Profit:</span>
+                    <div className="flex space-x-0.5">
                       {[25, 50, 100].map((roe) => (
                         <button
                           key={roe}
@@ -869,31 +868,31 @@ export const TurboTradeWindow: React.FC = () => {
                             const target = effectiveEntryPrice * (1 + (roe / 100) / leverage);
                             setPreTradeTp(target.toFixed(2));
                           }}
-                          className="win-btn text-[8px] px-1 py-0 text-black font-bold"
+                          className="win-btn text-[7.5px] px-1 py-0 text-black font-bold"
                         >
                           +{roe}%
                         </button>
                       ))}
                     </div>
                   </div>
-                  <div className="win-inset bg-white px-1.5 py-0.5 flex items-center">
-                    <span className="text-[#666] font-mono text-[10px] mr-1">$</span>
+                  <div className="win-inset bg-white px-1 py-0.5 flex items-center">
+                    <span className="text-[#666] font-mono text-[9px] mr-1">$</span>
                     <input
                       type="number"
                       step="0.01"
                       placeholder={effectiveEntryPrice ? (effectiveEntryPrice * 1.05).toFixed(2) : '0.00'}
                       value={preTradeTp}
                       onChange={(e) => setPreTradeTp(e.target.value)}
-                      className="w-full bg-transparent font-mono text-[11px] font-bold text-black border-none outline-none p-0"
+                      className="w-full bg-transparent font-mono text-[10px] font-bold text-black border-none outline-none p-0"
                     />
                   </div>
                 </div>
 
                 {/* Pre-trade SL Input */}
                 <div>
-                  <div className="flex justify-between items-center text-[9px] text-black font-bold mb-0.5">
-                    <span className="text-[#BA1A1A]">Stop Loss (SL):</span>
-                    <div className="flex space-x-1">
+                  <div className="flex justify-between items-center text-[8.5px] text-black font-bold mb-0.5">
+                    <span className="text-[#BA1A1A]">Stop Loss:</span>
+                    <div className="flex space-x-0.5">
                       {[25, 50].map((roe) => (
                         <button
                           key={roe}
@@ -902,22 +901,22 @@ export const TurboTradeWindow: React.FC = () => {
                             const target = effectiveEntryPrice * (1 - (roe / 100) / leverage);
                             setPreTradeSl(target.toFixed(2));
                           }}
-                          className="win-btn text-[8px] px-1 py-0 text-black font-bold"
+                          className="win-btn text-[7.5px] px-1 py-0 text-black font-bold"
                         >
                           -{roe}%
                         </button>
                       ))}
                     </div>
                   </div>
-                  <div className="win-inset bg-white px-1.5 py-0.5 flex items-center">
-                    <span className="text-[#666] font-mono text-[10px] mr-1">$</span>
+                  <div className="win-inset bg-white px-1 py-0.5 flex items-center">
+                    <span className="text-[#666] font-mono text-[9px] mr-1">$</span>
                     <input
                       type="number"
                       step="0.01"
                       placeholder={effectiveEntryPrice ? (effectiveEntryPrice * 0.95).toFixed(2) : '0.00'}
                       value={preTradeSl}
                       onChange={(e) => setPreTradeSl(e.target.value)}
-                      className="w-full bg-transparent font-mono text-[11px] font-bold text-black border-none outline-none p-0"
+                      className="w-full bg-transparent font-mono text-[10px] font-bold text-black border-none outline-none p-0"
                     />
                   </div>
                 </div>
@@ -925,43 +924,39 @@ export const TurboTradeWindow: React.FC = () => {
             )}
           </div>
 
-          {/* Real-time Pre-trade Calculation Box */}
-          <div className="win-inset-deep bg-[#121212] p-2 font-mono text-[9.5px] text-white flex flex-col gap-1">
+          {/* Real-time Pre-trade Calculation Box (Compact Summary) */}
+          <div className="win-inset-deep bg-[#121212] p-1.5 font-mono text-[8.5px] text-white flex flex-col gap-0.5">
             <div className="flex justify-between">
-              <span className="text-[#D0D0D0] font-semibold">Margin Cost:</span>
+              <span className="text-[#AAA]">Margin Cost:</span>
               <span className="text-white font-bold">${marginAmount.toFixed(2)} USDT</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-[#D0D0D0] font-semibold">Notional Value:</span>
-              <span className="text-white font-bold">${notional.toFixed(2)} USDT</span>
+              <span className="text-[#AAA]">Notional / Max:</span>
+              <span className="text-white font-bold">
+                ${notional.toFixed(1)} / <span className="text-crt-bullish">${maxPositionSize.toFixed(1)}</span>
+              </span>
+            </div>
+            <div className="flex justify-between border-t border-[#2A2A2A] pt-0.5">
+              <span className="text-[#AAA]">Est. Liq (L/S):</span>
+              <span className="text-crt-amber font-bold">
+                ${estLiqLong > 0 ? estLiqLong.toFixed(1) : '-'} / ${estLiqShort > 0 ? estLiqShort.toFixed(1) : '-'}
+              </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-[#D0D0D0] font-semibold">Max Position:</span>
-              <span className="text-crt-bullish font-bold">${maxPositionSize.toFixed(2)} USDT</span>
-            </div>
-            <div className="flex justify-between border-t border-[#333] pt-1">
-              <span className="text-[#D0D0D0] font-semibold">Est. Liq (Long):</span>
-              <span className="text-crt-bullish font-bold">${estLiqLong.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-[#D0D0D0] font-semibold">Est. Liq (Short):</span>
-              <span className="text-crt-bearish font-bold">${estLiqShort.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between border-t border-[#333] pt-1">
-              <span className="text-[#D0D0D0] font-semibold">Taker Fee (0.05%):</span>
-              <span className="text-white font-bold">${fee.toFixed(4)}</span>
+              <span className="text-[#AAA]">Fee (0.05%):</span>
+              <span className="text-[#DDD] font-bold">${fee.toFixed(3)} USDT</span>
             </div>
           </div>
 
           {/* Order Error Notification */}
           {orderError && (
-            <div className="bg-[#FFE5E5] text-[#990000] text-[9px] font-bold p-1 border border-[#FF3333]">
+            <div className="bg-[#FFE5E5] text-[#990000] text-[8.5px] font-bold p-1 border border-[#FF3333]">
               ⚠ {orderError}
             </div>
           )}
 
-          {/* Execution Action Buttons */}
-          <div className="flex flex-col gap-1.5 pt-1">
+          {/* Execution Action Buttons (Side-by-Side to Prevent Any Clipping) */}
+          <div className="grid grid-cols-2 gap-1 pt-0.5 flex-shrink-0">
             <button
               disabled={isSubmitting}
               onClick={() => {
@@ -969,7 +964,7 @@ export const TurboTradeWindow: React.FC = () => {
                 setOrderError(null);
                 const margin = parseFloat(orderSize);
                 if (isNaN(margin) || margin <= 0) {
-                  setOrderError('Enter valid margin amount');
+                  setOrderError('Enter valid margin');
                   return;
                 }
                 const parsedLimit = orderType === 'limit' ? parseFloat(limitPriceInput) : undefined;
@@ -1006,13 +1001,13 @@ export const TurboTradeWindow: React.FC = () => {
                   setTimeout(() => setIsSubmitting(false), 300);
                 }
               }}
-              className={`win-btn bg-[#008531] text-white font-bold py-2 flex items-center justify-center space-x-1.5 hover:bg-[#009938] active:translate-x-0.5 active:translate-y-0.5 shadow ${
+              className={`win-btn bg-[#008531] text-white font-bold py-1.5 px-1 flex items-center justify-center space-x-1 hover:bg-[#009938] active:translate-x-0.5 active:translate-y-0.5 shadow ${
                 isSubmitting ? 'opacity-60 cursor-not-allowed' : ''
               }`}
             >
-              <PixelIcon name="arrow_up" size={14} className="text-crt-bullish" />
-              <span className="text-[11px] tracking-wide uppercase">
-                {isSubmitting ? 'EXECUTING...' : 'OPEN LONG (BUY)'}
+              <PixelIcon name="arrow_up" size={11} className="text-crt-bullish" />
+              <span className="text-[10px] tracking-wide uppercase font-extrabold">
+                {isSubmitting ? 'EXEC...' : 'BUY / LONG'}
               </span>
             </button>
 
@@ -1023,7 +1018,7 @@ export const TurboTradeWindow: React.FC = () => {
                 setOrderError(null);
                 const margin = parseFloat(orderSize);
                 if (isNaN(margin) || margin <= 0) {
-                  setOrderError('Enter valid margin amount');
+                  setOrderError('Enter valid margin');
                   return;
                 }
                 const parsedLimit = orderType === 'limit' ? parseFloat(limitPriceInput) : undefined;
@@ -1060,13 +1055,13 @@ export const TurboTradeWindow: React.FC = () => {
                   setTimeout(() => setIsSubmitting(false), 300);
                 }
               }}
-              className={`win-btn bg-[#BA1A1A] text-white font-bold py-2 flex items-center justify-center space-x-1.5 hover:bg-[#CC2020] active:translate-x-0.5 active:translate-y-0.5 shadow ${
+              className={`win-btn bg-[#BA1A1A] text-white font-bold py-1.5 px-1 flex items-center justify-center space-x-1 hover:bg-[#D32F2F] active:translate-x-0.5 active:translate-y-0.5 shadow ${
                 isSubmitting ? 'opacity-60 cursor-not-allowed' : ''
               }`}
             >
-              <PixelIcon name="arrow_down" size={14} className="text-white" />
-              <span className="text-[11px] tracking-wide uppercase">
-                {isSubmitting ? 'EXECUTING...' : 'OPEN SHORT (SELL)'}
+              <PixelIcon name="arrow_down" size={11} className="text-[#FFAAAA]" />
+              <span className="text-[10px] tracking-wide uppercase font-extrabold">
+                {isSubmitting ? 'EXEC...' : 'SELL / SHORT'}
               </span>
             </button>
           </div>
@@ -1076,7 +1071,7 @@ export const TurboTradeWindow: React.FC = () => {
       {/* =================================================================== */}
       {/* FULL-WIDTH BOTTOM WORKSPACE: Open Positions & Order History         */}
       {/* =================================================================== */}
-      <div className="h-[175px] win-inset bg-win-base p-1 flex flex-col flex-shrink-0">
+      <div className="h-[160px] win-inset bg-win-base p-1 flex flex-col flex-shrink-0">
         {/* Tab Navigation Header */}
         <div className="flex items-center justify-between border-b border-[#808080] pb-1 px-1 flex-shrink-0">
           <div className="flex items-center space-x-1">

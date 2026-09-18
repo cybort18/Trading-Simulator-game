@@ -305,7 +305,7 @@ export class BinanceWsService {
   public async fetchHistoricalKlines(
     symbol: TradingPair,
     interval = '1m',
-    limit = 100
+    limit = 300
   ): Promise<CandleData[]> {
     // Normalize interval for Binance API compatibility ('1D' -> '1d')
     const normalizedInterval = interval === '1D' ? '1d' : interval.toLowerCase();
@@ -339,7 +339,7 @@ export class BinanceWsService {
 
   private generateFallbackHistoricalCandles(
     symbol: TradingPair,
-    count: number,
+    count = 300,
     interval = '1m'
   ): CandleData[] {
     const marketPrice = useMarketDataStore.getState().prices[symbol];

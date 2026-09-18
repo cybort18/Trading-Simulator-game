@@ -166,10 +166,10 @@ export const RetroCandleChart: React.FC<RetroCandleChartProps> = ({ pair, timefr
     const wsService = BinanceWsService.getInstance();
     wsService.subscribeKline(pair, timeframe);
 
-    // Hydrate historical klines
+    // Hydrate historical klines (300 candles for deep historical trend analysis)
     let isCancelled = false;
     wsService
-      .fetchHistoricalKlines(pair, timeframe, 80)
+      .fetchHistoricalKlines(pair, timeframe, 300)
       .then((data) => {
         if (!isCancelled && seriesRef.current) {
           const formatted = data.map((d) => ({
@@ -191,8 +191,15 @@ export const RetroCandleChart: React.FC<RetroCandleChartProps> = ({ pair, timefr
             };
             lastCandleTimeRef.current = Number(lastCandle.time);
             useMarketDataStore.getState().updateTicker(pair, { price: lastCandle.close });
+
+            // Display latest ~65 candles with optimal bar spacing while keeping full 300 candles in scrollable history
+            const totalBars = formatted.length;
+            const visibleBars = 65;
+            chart.timeScale().setVisibleLogicalRange({
+              from: Math.max(0, totalBars - visibleBars),
+              to: totalBars + 4,
+            });
           }
-          chart.timeScale().fitContent();
           setIsLoading(false);
         }
       })
