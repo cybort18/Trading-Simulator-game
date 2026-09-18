@@ -40,6 +40,23 @@ describe('Web3AuthService & SIWE Authentication', () => {
     expect(message).toContain('Sign-In to CryptoOS 98 Degen Trading Terminal. Zero gas fees required.');
   });
 
+  it('dynamically matches domain to uri authority according to EIP-4361 standard', () => {
+    const nonce = 'X9Y8Z7W6V5U4T3S2';
+    const message = Web3AuthService.createSiweMessage({
+      address: sampleAddress,
+      nonce,
+      uri: 'https://trading-the-game.vercel.app/trade',
+    });
+
+    expect(message).toContain('trading-the-game.vercel.app wants you to sign in with your Ethereum account:');
+    expect(message).toContain('URI: https://trading-the-game.vercel.app/trade');
+  });
+
+  it('extracts authority host correctly with getDomainFromUri', () => {
+    expect(Web3AuthService.getDomainFromUri('https://trading-the-game.vercel.app')).toBe('trading-the-game.vercel.app');
+    expect(Web3AuthService.getDomainFromUri('https://app.cryptoos98.finance:8080/path')).toBe('app.cryptoos98.finance:8080');
+  });
+
   it('formats and truncates 0x Ethereum addresses for retro Windows 98 chrome', () => {
     expect(Web3AuthService.truncateAddress(sampleAddress)).toBe('0x71c8...19e6');
     expect(Web3AuthService.truncateAddress(null)).toBe('0x00...0000');

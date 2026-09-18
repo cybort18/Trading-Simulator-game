@@ -36,35 +36,54 @@ export class Web3AuthService {
   }
 
   /**
+   * Extracts hostname/authority from a URI.
+   */
+  public static getDomainFromUri(uri: string): string {
+    try {
+      const parsed = new URL(uri);
+      return parsed.host;
+    } catch {
+      return uri.replace(/^https?:\/\//, '').split('/')[0] || 'cryptoos98.finance';
+    }
+  }
+
+  /**
    * Creates a standardized Sign-In with Ethereum (SIWE / EIP-4361) challenge message.
+   * Ensures domain and URI are 100% compliant with EIP-4361 to prevent spoofing alerts in MetaMask/Blockaid.
    */
   public static createSiweMessage(params: {
     address: string;
     nonce: string;
+    domain?: string;
     issuedAt?: string;
     chainId?: number;
     uri?: string;
+    statement?: string;
   }): string {
-    const {
-      address,
-      nonce,
-      issuedAt = new Date().toISOString(),
-      chainId = 1,
-      uri = typeof window !== 'undefined' ? window.location.origin : 'https://cryptoos98.finance',
-    } = params;
+    const defaultUri = typeof window !== 'undefined' ? window.location.origin : 'https://cryptoos98.finance';
+    const uri = params.uri || defaultUri;
 
-    const formattedAddress = getAddress(address);
+    // In EIP-4361: domain MUST match the authority of the URI
+    const defaultDomain = typeof window !== 'undefined' && window.location.host
+      ? window.location.host
+      : Web3AuthService.getDomainFromUri(uri);
+
+    const domain = params.domain || defaultDomain || 'cryptoos98.finance';
+    const issuedAt = params.issuedAt || new Date().toISOString();
+    const chainId = params.chainId ?? 1;
+    const statement = params.statement || 'Sign-In to CryptoOS 98 Degen Trading Terminal. Zero gas fees required.';
+    const formattedAddress = getAddress(params.address);
 
     return [
-      `cryptoos98.finance wants you to sign in with your Ethereum account:`,
+      `${domain} wants you to sign in with your Ethereum account:`,
       `${formattedAddress}`,
       ``,
-      `Sign-In to CryptoOS 98 Degen Trading Terminal. Zero gas fees required.`,
+      `${statement}`,
       ``,
       `URI: ${uri}`,
       `Version: 1`,
       `Chain ID: ${chainId}`,
-      `Nonce: ${nonce}`,
+      `Nonce: ${params.nonce}`,
       `Issued At: ${issuedAt}`,
     ].join('\n');
   }
@@ -130,9 +149,27 @@ export class Web3AuthService {
     const rawAddress = accounts[0];
     const checksumAddress = getAddress(rawAddress);
     const nonce = this.generateNonce();
+
+    // 1b. Dynamically query active chain ID from provider
+    let chainId = 1;
+    try {
+      const hexChainId = (await ethereum.request({ method: 'eth_chainId' })) as string;
+      if (hexChainId) {
+        chainId = parseInt(hexChainId, 16) || 1;
+      }
+    } catch {
+      chainId = 1;
+    }
+
+    const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://cryptoos98.finance';
+    const currentHost = typeof window !== 'undefined' ? window.location.host : 'cryptoos98.finance';
+
     const message = this.createSiweMessage({
       address: checksumAddress,
       nonce,
+      domain: currentHost,
+      uri: currentOrigin,
+      chainId,
     });
 
     // 2. Request cryptographic signature (zero gas)
