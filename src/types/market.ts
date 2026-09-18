@@ -18,6 +18,7 @@ export interface CandleData {
   low: number;
   close: number;
   volume?: number;
+  interval?: string;
 }
 
 export type ConnectionStatus = 'CONNECTING' | 'CONNECTED' | 'RECONNECTING' | 'OFFLINE';

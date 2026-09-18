@@ -28,6 +28,7 @@ describe('Binance Data Sanitizer', () => {
       expect(result?.high).toBe(64200.0);
       expect(result?.low).toBe(64100.1);
       expect(result?.volume).toBe(12.45);
+      expect(result?.interval).toBe('1m');
     });
 
     it('handles numeric inputs directly without re-stringifying', () => {

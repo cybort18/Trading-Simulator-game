@@ -572,7 +572,7 @@ export const TurboTradeWindow: React.FC = () => {
                 </div>
 
                 <div className="text-[10px] text-[#C0C0C0] font-mono hidden sm:block">
-                  BINANCE PERPETUAL • REALTIME 1M WS
+                  BINANCE PERPETUAL • REALTIME {timeframe.toUpperCase()} STREAM
                 </div>
               </div>
 

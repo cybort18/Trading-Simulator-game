@@ -29,6 +29,13 @@ export const RetroCandleChart: React.FC<RetroCandleChartProps> = ({ pair, timefr
   const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const priceLinesRef = useRef<IPriceLine[]>([]);
   const lastCandleTimeRef = useRef<number | null>(null);
+  const formingCandleRef = useRef<{
+    time: number;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Latest candle update from WebSocket store
@@ -68,16 +75,19 @@ export const RetroCandleChart: React.FC<RetroCandleChartProps> = ({ pair, timefr
       },
       timeScale: {
         borderColor: '#333333',
-        timeVisible: true,
+        timeVisible: timeframe.toLowerCase() !== '1d',
         secondsVisible: false,
+        rightOffset: 6,
+        barSpacing: 6,
+        minBarSpacing: 2,
       },
       rightPriceScale: {
         borderColor: '#333333',
         autoScale: true,
         mode: PriceScaleMode.Normal,
         scaleMargins: {
-          top: 0.1,
-          bottom: 0.1,
+          top: 0.12,
+          bottom: 0.12,
         },
       },
     });
@@ -85,7 +95,10 @@ export const RetroCandleChart: React.FC<RetroCandleChartProps> = ({ pair, timefr
     const candleSeries = chart.addSeries(CandlestickSeries, {
       upColor: '#00FF66',
       downColor: '#FF3333',
-      borderVisible: false,
+      borderVisible: true,
+      borderColor: '#00FF66',
+      borderUpColor: '#00FF66',
+      borderDownColor: '#FF3333',
       wickUpColor: '#00FF66',
       wickDownColor: '#FF3333',
       priceFormat: {
@@ -93,6 +106,10 @@ export const RetroCandleChart: React.FC<RetroCandleChartProps> = ({ pair, timefr
         precision: 2,
         minMove: 0.01,
       },
+      priceLineVisible: true,
+      priceLineWidth: 1,
+      priceLineColor: '#00FF66',
+      priceLineStyle: LineStyle.Dotted,
       autoscaleInfoProvider: (original: () => AutoscaleInfo | null) => {
         const res = original();
         if (!res || !res.priceRange) return res;
@@ -145,11 +162,14 @@ export const RetroCandleChart: React.FC<RetroCandleChartProps> = ({ pair, timefr
 
     resizeObserver.observe(chartContainerRef.current);
 
+    // Subscribe to live kline stream for the active timeframe
+    const wsService = BinanceWsService.getInstance();
+    wsService.subscribeKline(pair, timeframe);
+
     // Hydrate historical klines
     let isCancelled = false;
-    const wsService = BinanceWsService.getInstance();
     wsService
-      .fetchHistoricalKlines(pair, timeframe, 100)
+      .fetchHistoricalKlines(pair, timeframe, 80)
       .then((data) => {
         if (!isCancelled && seriesRef.current) {
           const formatted = data.map((d) => ({
@@ -162,6 +182,13 @@ export const RetroCandleChart: React.FC<RetroCandleChartProps> = ({ pair, timefr
           seriesRef.current.setData(formatted);
           if (formatted.length > 0) {
             const lastCandle = formatted[formatted.length - 1];
+            formingCandleRef.current = {
+              time: Number(lastCandle.time),
+              open: lastCandle.open,
+              high: lastCandle.high,
+              low: lastCandle.low,
+              close: lastCandle.close,
+            };
             lastCandleTimeRef.current = Number(lastCandle.time);
             useMarketDataStore.getState().updateTicker(pair, { price: lastCandle.close });
           }
@@ -188,6 +215,7 @@ export const RetroCandleChart: React.FC<RetroCandleChartProps> = ({ pair, timefr
       chart.remove();
       chartRef.current = null;
       seriesRef.current = null;
+      formingCandleRef.current = null;
       lastCandleTimeRef.current = null;
     };
   }, [pair, timeframe]);
@@ -302,18 +330,18 @@ export const RetroCandleChart: React.FC<RetroCandleChartProps> = ({ pair, timefr
   useEffect(() => {
     if (!seriesRef.current || !latestCandle || isLoading) return;
 
+    const normalizedTf = timeframe === '1D' ? '1d' : timeframe.toLowerCase();
     const tfSecondsMap: Record<string, number> = {
       '1m': 60,
       '5m': 300,
       '15m': 900,
       '1h': 3600,
-      '1D': 86400,
       '1d': 86400,
     };
-    const stepSeconds = tfSecondsMap[timeframe] || 60;
+    const stepSeconds = tfSecondsMap[normalizedTf] || 60;
 
-    if (stepSeconds === 60) {
-      // 1-minute native streaming
+    // Case 1: Exact dedicated kline match from Binance WebSocket stream
+    if (latestCandle.interval && latestCandle.interval.toLowerCase() === normalizedTf) {
       if (lastCandleTimeRef.current !== null && latestCandle.time < lastCandleTimeRef.current) {
         return;
       }
@@ -326,28 +354,84 @@ export const RetroCandleChart: React.FC<RetroCandleChartProps> = ({ pair, timefr
           low: latestCandle.low,
           close: latestCandle.close,
         });
-        lastCandleTimeRef.current = latestCandle.time;
-      } catch (err) {
-        console.warn('Candle update skipped:', err);
-      }
-    } else {
-      // Higher timeframe (5m, 15m, 1h, 1D): align the timestamp to timeframe candle boundary
-      const alignedTime = (Math.floor(latestCandle.time / stepSeconds) * stepSeconds) as Time;
-      if (lastCandleTimeRef.current !== null && Number(alignedTime) < lastCandleTimeRef.current) {
-        return;
-      }
-
-      try {
-        seriesRef.current.update({
-          time: alignedTime,
+        formingCandleRef.current = {
+          time: latestCandle.time,
           open: latestCandle.open,
           high: latestCandle.high,
           low: latestCandle.low,
           close: latestCandle.close,
-        });
-        lastCandleTimeRef.current = Number(alignedTime);
+        };
+        lastCandleTimeRef.current = latestCandle.time;
       } catch (err) {
-        console.warn('Higher timeframe candle update skipped:', err);
+        console.warn('Dedicated timeframe candle update skipped:', err);
+      }
+      return;
+    }
+
+    // Case 2: Aggregate incremental ticks/1m candles into the active forming candle
+    const alignedTime = Math.floor(latestCandle.time / stepSeconds) * stepSeconds;
+
+    if (!formingCandleRef.current) {
+      formingCandleRef.current = {
+        time: alignedTime,
+        open: latestCandle.open,
+        high: latestCandle.high,
+        low: latestCandle.low,
+        close: latestCandle.close,
+      };
+      try {
+        seriesRef.current.update({
+          time: alignedTime as Time,
+          open: formingCandleRef.current.open,
+          high: formingCandleRef.current.high,
+          low: formingCandleRef.current.low,
+          close: formingCandleRef.current.close,
+        });
+        lastCandleTimeRef.current = alignedTime;
+      } catch (err) {
+        console.warn('Forming candle initial update skipped:', err);
+      }
+      return;
+    }
+
+    if (alignedTime === formingCandleRef.current.time) {
+      // Same timeframe candle: keep OPEN, expand HIGH/LOW, update CLOSE
+      formingCandleRef.current.high = Math.max(formingCandleRef.current.high, latestCandle.high);
+      formingCandleRef.current.low = Math.min(formingCandleRef.current.low, latestCandle.low);
+      formingCandleRef.current.close = latestCandle.close;
+
+      try {
+        seriesRef.current.update({
+          time: alignedTime as Time,
+          open: formingCandleRef.current.open,
+          high: formingCandleRef.current.high,
+          low: formingCandleRef.current.low,
+          close: formingCandleRef.current.close,
+        });
+      } catch (err) {
+        console.warn('Forming candle update skipped:', err);
+      }
+    } else if (alignedTime > formingCandleRef.current.time) {
+      // New timeframe candle period started!
+      formingCandleRef.current = {
+        time: alignedTime,
+        open: latestCandle.open,
+        high: latestCandle.high,
+        low: latestCandle.low,
+        close: latestCandle.close,
+      };
+
+      try {
+        seriesRef.current.update({
+          time: alignedTime as Time,
+          open: formingCandleRef.current.open,
+          high: formingCandleRef.current.high,
+          low: formingCandleRef.current.low,
+          close: formingCandleRef.current.close,
+        });
+        lastCandleTimeRef.current = alignedTime;
+      } catch (err) {
+        console.warn('New candle boundary update skipped:', err);
       }
     }
   }, [latestCandle, isLoading, timeframe]);

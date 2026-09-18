@@ -65,6 +65,7 @@ export function sanitizeKlinePayload(raw: BinanceRawKline | null | undefined): C
     low,
     close,
     volume,
+    interval: raw.i ? String(raw.i).toLowerCase() : undefined,
   };
 }
 

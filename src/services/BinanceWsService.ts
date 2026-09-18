@@ -23,6 +23,7 @@ export class BinanceWsService {
     'wss://stream.binance.com:9443/stream?streams=btcusdt@ticker/btcusdt@kline_1m/ethusdt@ticker/ethusdt@kline_1m/solusdt@ticker/solusdt@kline_1m',
     'wss://fstream.binance.com/stream?streams=btcusdt@ticker/btcusdt@kline_1m/btcusdt@markPrice@1s/ethusdt@ticker/ethusdt@kline_1m/ethusdt@markPrice@1s/solusdt@ticker/solusdt@kline_1m/solusdt@markPrice@1s',
   ];
+  private activeKlineSubscription: string | null = null;
   private currentStreamIndex = 0;
 
   private constructor() {}
@@ -52,6 +53,21 @@ export class BinanceWsService {
         this.lastMessageTime = Date.now();
         useMarketDataStore.getState().setConnectionStatus('CONNECTED', 14);
         this.startHeartbeat();
+
+        // Resubscribe active timeframe stream if previously chosen
+        if (this.activeKlineSubscription && this.socket && this.socket.readyState === WebSocket.OPEN) {
+          try {
+            this.socket.send(
+              JSON.stringify({
+                method: 'SUBSCRIBE',
+                params: [this.activeKlineSubscription],
+                id: Date.now(),
+              })
+            );
+          } catch (err) {
+            console.warn('Failed to resubscribe active kline stream on open:', err);
+          }
+        }
       };
 
       this.socket.onmessage = (event: MessageEvent) => {
@@ -125,6 +141,49 @@ export class BinanceWsService {
       this.pendingTickers = {};
       this.pendingMarkPrices = {};
       useMarketDataStore.getState().batchUpdateTickers(tickers, marks);
+    }
+  }
+
+  /**
+   * Dynamically subscribes to real-time klines for the active chart timeframe.
+   * Unsubscribes from previous custom timeframe stream if different.
+   */
+  public subscribeKline(pair: TradingPair, interval: string): void {
+    const normalizedInterval = interval === '1D' ? '1d' : interval.toLowerCase();
+    const targetStream = `${pair.toLowerCase()}@kline_${normalizedInterval}`;
+
+    if (this.activeKlineSubscription === targetStream) {
+      return;
+    }
+
+    if (this.activeKlineSubscription && this.socket && this.socket.readyState === WebSocket.OPEN) {
+      try {
+        this.socket.send(
+          JSON.stringify({
+            method: 'UNSUBSCRIBE',
+            params: [this.activeKlineSubscription],
+            id: Date.now(),
+          })
+        );
+      } catch (err) {
+        console.warn('Failed to unsubscribe previous kline stream:', err);
+      }
+    }
+
+    this.activeKlineSubscription = targetStream;
+
+    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+      try {
+        this.socket.send(
+          JSON.stringify({
+            method: 'SUBSCRIBE',
+            params: [targetStream],
+            id: Date.now() + 1,
+          })
+        );
+      } catch (err) {
+        console.warn('Failed to subscribe new kline stream:', err);
+      }
     }
   }
 
@@ -288,38 +347,39 @@ export class BinanceWsService {
       ? marketPrice
       : symbol === 'BTCUSDT' ? 80500 : symbol === 'ETHUSDT' ? 2500 : 104;
 
+    const normalizedInterval = interval === '1D' ? '1d' : interval.toLowerCase();
     const intervalSecondsMap: Record<string, number> = {
       '1m': 60,
       '5m': 300,
       '15m': 900,
       '1h': 3600,
       '1d': 86400,
-      '1D': 86400,
     };
-    const stepSeconds = intervalSecondsMap[interval] || 60;
+    const stepSeconds = intervalSecondsMap[normalizedInterval] || 60;
     const now = Math.floor(Date.now() / (stepSeconds * 1000)) * stepSeconds;
     const candles: CandleData[] = [];
 
-    let currentPrice = basePrice;
-    for (let i = count; i >= 0; i--) {
+    // Anchor at current live price and construct historical baseline walking backwards
+    let currentClose = basePrice;
+    for (let i = 0; i <= count; i++) {
       const time = now - i * stepSeconds;
       const change = (Math.random() - 0.49) * (basePrice * 0.002);
-      const open = currentPrice;
-      const close = currentPrice + change;
-      const high = Math.max(open, close) + Math.random() * (basePrice * 0.001);
-      const low = Math.min(open, close) - Math.random() * (basePrice * 0.001);
+      const open = currentClose - change;
+      const high = Math.max(open, currentClose) + Math.random() * (basePrice * 0.001);
+      const low = Math.min(open, currentClose) - Math.random() * (basePrice * 0.001);
       const volume = Math.random() * 50 + 10;
 
-      candles.push({
+      candles.unshift({
         time,
         open,
         high,
         low,
-        close,
+        close: currentClose,
         volume,
+        interval: normalizedInterval,
       });
 
-      currentPrice = close;
+      currentClose = open;
     }
 
     return candles;
