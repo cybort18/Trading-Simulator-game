@@ -146,3 +146,56 @@
   -ms-overflow-style: none !important;
   scrollbar-width: none !important;
 }
+
+/* ========================================================================= */
+/* 7. FLUID RETRO WINDOW ANIMATIONS (Smooth Open, Close & Minimize)           */
+/* ========================================================================= */
+@keyframes winOpenAnim {
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes winCloseAnim {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.93) translateY(12px);
+  }
+}
+
+@keyframes winMinimizeAnim {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.82) translateY(50px);
+  }
+}
+
+.animate-win-open {
+  animation: winOpenAnim 160ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.animate-win-close {
+  animation: winCloseAnim 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  pointer-events: none !important;
+  will-change: transform, opacity;
+}
+
+.animate-win-minimize {
+  animation: winMinimizeAnim 160ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  pointer-events: none !important;
+  will-change: transform, opacity;
+}

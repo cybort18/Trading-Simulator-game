@@ -12,6 +12,7 @@ import { Taskbar } from '@/components/desktop/Taskbar';
 import { soundFXService } from '@/services/SoundFXService';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useSecurityStore } from '@/stores/useSecurityStore';
+import { Web3AuthService } from '@/services/Web3AuthService';
 
 // Lazy-loaded auxiliary windows & modals for optimal First Contentful Paint (FCP)
 const ShareFlexCardModal = React.lazy(() =>
@@ -57,7 +58,14 @@ export const DesktopCanvas: React.FC = () => {
   const isFlexCardOpen = useWindowStore((state) => state.windows.flexcard?.isOpen ?? false);
   const isConnectModalOpen = useAuthStore((state) => state.isConnectModalOpen);
   const openConnectModal = useAuthStore((state) => state.openConnectModal);
+  const isConnected = useAuthStore((state) => state.isConnected);
+  const walletAddress = useAuthStore((state) => state.walletAddress);
+  const username = useAuthStore((state) => state.username);
   const isBSODActive = useSecurityStore((state) => state.isBSODActive);
+
+  const palette = walletAddress
+    ? Web3AuthService.getAddressPalette(walletAddress)
+    : { primary: '#000080', secondary: '#008531', accent: '#FFAA00' };
 
   const handleIconClick = (e: React.MouseEvent, id: WindowId | 'recycle_bin' | 'connect_wallet') => {
     e.stopPropagation();
@@ -88,6 +96,81 @@ export const DesktopCanvas: React.FC = () => {
       }}
       className="relative w-screen h-screen bg-desktop-teal overflow-hidden select-none font-ui"
     >
+      {/* =================================================================== */}
+      {/* TOP-RIGHT FLOATING WALLET ACTION CHIP (High Visibility Header)     */}
+      {/* =================================================================== */}
+      <div className="fixed top-2.5 right-3 z-40 flex items-center space-x-2 select-none font-ui">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            soundFXService.playKeyClick();
+            openConnectModal();
+          }}
+          className={`win-btn win-outset px-2.5 py-1.5 flex items-center space-x-2 shadow-xl cursor-pointer group active:translate-x-0.5 active:translate-y-0.5 ${
+            isConnected
+              ? 'bg-win-base hover:bg-win-pressed'
+              : 'bg-win-base hover:bg-[#D5D5D5] border-2 border-bevel-highlight ring-1 ring-bevel-dark'
+          }`}
+          title={
+            isConnected && walletAddress
+              ? `Connected: ${walletAddress}\nClick to view profile or disconnect.`
+              : 'Guest Mode: Progress is not saved to cloud.\nClick to connect Web3 wallet!'
+          }
+        >
+          {isConnected && walletAddress ? (
+            <>
+              {/* Connected Blockie Pixel Box */}
+              <div
+                className="w-5 h-5 win-inset flex items-center justify-center font-mono font-bold text-white text-[9px] shadow-sm flex-shrink-0"
+                style={{ backgroundColor: palette.primary, borderColor: palette.accent }}
+              >
+                {walletAddress.substring(2, 4).toUpperCase()}
+              </div>
+
+              {/* Username / Truncated Address */}
+              <div className="flex flex-col text-left leading-tight">
+                <span className="font-bold text-[11px] text-black group-hover:text-titlebar-navy">
+                  {username || Web3AuthService.truncateAddress(walletAddress)}
+                </span>
+                <span className="text-[9px] text-[#555] font-mono">
+                  {Web3AuthService.truncateAddress(walletAddress)}
+                </span>
+              </div>
+
+              {/* Verified Online Status Chip */}
+              <div className="win-inset bg-[#0a1a0e] px-1.5 py-0.5 flex items-center space-x-1 font-mono text-[9px]">
+                <span className="w-2 h-2 rounded-full bg-crt-bullish animate-pulse"></span>
+                <span className="text-[#00FF66] font-bold">ONLINE</span>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Disconnected / Guest Icon */}
+              <div className="w-5 h-5 win-inset bg-titlebar-navy flex items-center justify-center text-white text-[10px] font-bold shadow-sm flex-shrink-0">
+                ⚡
+              </div>
+
+              {/* Call-to-Action Text */}
+              <div className="flex flex-col text-left leading-tight">
+                <span className="font-bold text-[11px] text-black group-hover:text-titlebar-navy flex items-center space-x-1">
+                  <span>Connect Wallet</span>
+                  <span className="text-[9px] text-titlebar-navy">►</span>
+                </span>
+                <span className="text-[9px] text-crt-amber font-bold font-mono">
+                  SAVE PROGRESS
+                </span>
+              </div>
+
+              {/* Guest Indicator Chip */}
+              <div className="win-inset bg-[#1a140a] px-1.5 py-0.5 flex items-center space-x-1 font-mono text-[9px]">
+                <span className="w-2 h-2 rounded-full bg-crt-amber animate-pulse"></span>
+                <span className="text-amber-400 font-bold">GUEST</span>
+              </div>
+            </>
+          )}
+        </button>
+      </div>
+
       {/* =================================================================== */}
       {/* DESKTOP ICONS GRID (Left Dock)                                      */}
       {/* =================================================================== */}

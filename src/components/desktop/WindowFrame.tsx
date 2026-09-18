@@ -45,9 +45,31 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
   const updatePosition = useWindowStore((state) => state.updatePosition);
 
   const [isDragging, setIsDragging] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  const [isMinimizing, setIsMinimizing] = useState(false);
   const dragOffsetRef = useRef<{ offsetX: number; offsetY: number }>({ offsetX: 0, offsetY: 0 });
   const rafRef = useRef<number | null>(null);
   const pendingPosRef = useRef<{ x: number; y: number } | null>(null);
+
+  const handleClose = useCallback(() => {
+    if (isClosing) return;
+    soundFXService.playKeyClick();
+    setIsClosing(true);
+    setTimeout(() => {
+      closeWindow(id);
+      setIsClosing(false);
+    }, 180);
+  }, [closeWindow, id, isClosing]);
+
+  const handleMinimize = useCallback(() => {
+    if (isMinimizing || isClosing) return;
+    soundFXService.playKeyClick();
+    setIsMinimizing(true);
+    setTimeout(() => {
+      minimizeWindow(id);
+      setIsMinimizing(false);
+    }, 160);
+  }, [minimizeWindow, id, isMinimizing, isClosing]);
 
   const isMaximized = windowState?.isMaximized ?? false;
 
@@ -182,11 +204,19 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
         zIndex: windowState.zIndex,
       };
 
+  const animClass = isClosing
+    ? 'animate-win-close'
+    : isMinimizing
+    ? 'animate-win-minimize'
+    : isDragging
+    ? ''
+    : 'animate-win-open';
+
   return (
     <section
       style={windowStyle}
       onMouseDown={() => focusWindow(id)}
-      className={`window-outer-frame select-none flex flex-col shadow-2xl bg-win-base ${
+      className={`window-outer-frame select-none flex flex-col shadow-2xl bg-win-base ${animClass} ${
         isActive ? 'ring-1 ring-bevel-dark' : 'opacity-95'
       }`}
     >
@@ -222,7 +252,7 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
             </button>
           )}
           <button
-            onClick={() => minimizeWindow(id)}
+            onClick={handleMinimize}
             className="w-[16px] h-[14px] win-btn text-black text-[9px] font-bold flex items-center justify-center active:translate-x-0.5 active:translate-y-0.5"
             title="Minimize"
           >
@@ -236,7 +266,7 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
             {isMaximized ? '🗗' : '🗖'}
           </button>
           <button
-            onClick={() => closeWindow(id)}
+            onClick={handleClose}
             className="w-[16px] h-[14px] win-btn text-error hover:bg-error hover:text-white text-[9px] font-extrabold flex items-center justify-center active:translate-x-0.5 active:translate-y-0.5"
             title="Close"
           >
@@ -247,7 +277,7 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
 
       {/* Classic Menu Bar with Functional Dropdowns */}
       {(() => {
-        const effectiveMenus: WindowMenuCategory[] = menus && menus.length > 0
+        const rawMenus: WindowMenuCategory[] = menus && menus.length > 0
           ? menus
           : (menuItems || []).map((name) => ({
               name,
@@ -258,6 +288,20 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
                 },
               ],
             }));
+
+        const effectiveMenus = rawMenus.map((cat) => ({
+          ...cat,
+          items: cat.items.map((action) => {
+            const labelLower = action.label.toLowerCase();
+            if (labelLower.includes('close') || labelLower.includes('exit')) {
+              return {
+                ...action,
+                onClick: handleClose,
+              };
+            }
+            return action;
+          }),
+        }));
 
         if (effectiveMenus.length === 0) return null;
 

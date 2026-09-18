@@ -20,6 +20,17 @@ export const ConnectWalletModal: React.FC = () => {
   const clearError = useAuthStore((state) => state.clearError);
 
   const [modemLog, setModemLog] = useState<string>('Modem Ready. Awaiting Web3 carrier signal...');
+  const [isClosing, setIsClosing] = useState<boolean>(false);
+
+  const handleCloseModal = () => {
+    if (isClosing) return;
+    soundFXService.playKeyClick();
+    setIsClosing(true);
+    setTimeout(() => {
+      closeConnectModal();
+      setIsClosing(false);
+    }, 180);
+  };
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -46,7 +57,7 @@ export const ConnectWalletModal: React.FC = () => {
     if (ok) {
       soundFXService.playClaimReward();
       setTimeout(() => {
-        closeConnectModal();
+        handleCloseModal();
       }, 1200);
     } else {
       soundFXService.playLeverageWarning();
@@ -56,7 +67,7 @@ export const ConnectWalletModal: React.FC = () => {
   const handleGuest = () => {
     soundFXService.playKeyClick();
     playAsGuest();
-    closeConnectModal();
+    handleCloseModal();
   };
 
   const handleDisconnect = () => {
@@ -71,7 +82,7 @@ export const ConnectWalletModal: React.FC = () => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 select-none font-ui p-4">
       {/* Modal Dialog Window */}
-      <div className="w-[460px] max-w-full window-outer-frame bg-win-base shadow-2xl flex flex-col animate-in fade-in zoom-in-95 duration-100">
+      <div className={`w-[460px] max-w-full window-outer-frame bg-win-base shadow-2xl flex flex-col ${isClosing ? 'animate-win-close' : 'animate-win-open'}`}>
         {/* Title Bar */}
         <div className="h-6 bg-titlebar-navy text-white flex items-center justify-between px-1.5 py-0.5 select-none">
           <div className="flex items-center space-x-1.5 min-w-0">
@@ -82,7 +93,7 @@ export const ConnectWalletModal: React.FC = () => {
           </div>
           <div className="flex items-center space-x-1">
             <button
-              onClick={closeConnectModal}
+              onClick={handleCloseModal}
               className="win-btn px-1.5 h-4 flex items-center justify-center text-black font-bold text-[10px] bg-win-base leading-none hover:bg-error hover:text-white"
               title="Close"
             >
@@ -194,7 +205,7 @@ export const ConnectWalletModal: React.FC = () => {
                   Disconnect Wallet
                 </button>
                 <button
-                  onClick={closeConnectModal}
+                  onClick={handleCloseModal}
                   className="win-btn bg-win-base text-black px-4 py-1 text-[11px] font-bold active:translate-x-0.5 active:translate-y-0.5"
                 >
                   Close

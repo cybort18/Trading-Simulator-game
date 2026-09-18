@@ -19,6 +19,7 @@ export const WelcomeModal: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [dontShowAgain, setDontShowAgain] = useState<boolean>(false);
   const [targetApp, setTargetApp] = useState<'turbotrade' | 'degenvault' | 'clean'>('turbotrade');
+  const [isClosing, setIsClosing] = useState<boolean>(false);
 
   if (!windowState || !windowState.isOpen) {
     return null;
@@ -35,25 +36,30 @@ export const WelcomeModal: React.FC = () => {
   };
 
   const handleFinish = () => {
+    if (isClosing) return;
     soundFXService.playKeyClick();
     if (dontShowAgain) {
       safeStateStorage.setItem('CRYPTOOS_98_HIDE_WELCOME', 'true');
     }
-    closeWindow('welcome');
+    setIsClosing(true);
+    setTimeout(() => {
+      closeWindow('welcome');
+      setIsClosing(false);
 
-    if (targetApp === 'turbotrade') {
-      openWindow('turbotrade');
-      focusWindow('turbotrade');
-    } else if (targetApp === 'degenvault') {
-      openWindow('degenvault');
-      focusWindow('degenvault');
-    }
+      if (targetApp === 'turbotrade') {
+        openWindow('turbotrade');
+        focusWindow('turbotrade');
+      } else if (targetApp === 'degenvault') {
+        openWindow('degenvault');
+        focusWindow('degenvault');
+      }
+    }, 180);
   };
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-3 select-none font-ui">
       {/* 90s Setup Wizard Frame */}
-      <div className="w-[660px] max-w-[96vw] window-outer-frame bg-win-base flex flex-col shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+      <div className={`w-[660px] max-w-[96vw] window-outer-frame bg-win-base flex flex-col shadow-2xl ${isClosing ? 'animate-win-close' : 'animate-win-open'}`}>
         {/* Title Bar */}
         <div className="h-6 bg-titlebar-navy text-white flex items-center justify-between px-2 py-0.5 select-none">
           <div className="flex items-center space-x-1.5 overflow-hidden">
