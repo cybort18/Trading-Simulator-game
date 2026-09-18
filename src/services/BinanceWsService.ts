@@ -248,10 +248,13 @@ export class BinanceWsService {
     interval = '1m',
     limit = 100
   ): Promise<CandleData[]> {
+    // Normalize interval for Binance API compatibility ('1D' -> '1d')
+    const normalizedInterval = interval === '1D' ? '1d' : interval.toLowerCase();
+
     const endpoints = [
-      `https://data-api.binance.vision/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`,
-      `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`,
-      `https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`,
+      `https://data-api.binance.vision/api/v3/klines?symbol=${symbol}&interval=${normalizedInterval}&limit=${limit}`,
+      `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${normalizedInterval}&limit=${limit}`,
+      `https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${normalizedInterval}&limit=${limit}`,
     ];
 
     for (const url of endpoints) {
@@ -272,19 +275,34 @@ export class BinanceWsService {
     }
 
     console.warn(`All Binance REST endpoints failed for ${symbol}, generating smooth historical baseline`);
-    return this.generateFallbackHistoricalCandles(symbol, limit);
+    return this.generateFallbackHistoricalCandles(symbol, limit, normalizedInterval);
   }
 
-  private generateFallbackHistoricalCandles(symbol: TradingPair, count: number): CandleData[] {
-    const basePrice =
-      symbol === 'BTCUSDT' ? 79500 : symbol === 'ETHUSDT' ? 2500 : 104;
-    // Align now to minute boundary in seconds
-    const now = Math.floor(Date.now() / 60000) * 60;
+  private generateFallbackHistoricalCandles(
+    symbol: TradingPair,
+    count: number,
+    interval = '1m'
+  ): CandleData[] {
+    const marketPrice = useMarketDataStore.getState().prices[symbol];
+    const basePrice = marketPrice && marketPrice > 0
+      ? marketPrice
+      : symbol === 'BTCUSDT' ? 80500 : symbol === 'ETHUSDT' ? 2500 : 104;
+
+    const intervalSecondsMap: Record<string, number> = {
+      '1m': 60,
+      '5m': 300,
+      '15m': 900,
+      '1h': 3600,
+      '1d': 86400,
+      '1D': 86400,
+    };
+    const stepSeconds = intervalSecondsMap[interval] || 60;
+    const now = Math.floor(Date.now() / (stepSeconds * 1000)) * stepSeconds;
     const candles: CandleData[] = [];
 
     let currentPrice = basePrice;
     for (let i = count; i >= 0; i--) {
-      const time = now - i * 60;
+      const time = now - i * stepSeconds;
       const change = (Math.random() - 0.49) * (basePrice * 0.002);
       const open = currentPrice;
       const close = currentPrice + change;

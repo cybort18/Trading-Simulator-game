@@ -302,24 +302,55 @@ export const RetroCandleChart: React.FC<RetroCandleChartProps> = ({ pair, timefr
   useEffect(() => {
     if (!seriesRef.current || !latestCandle || isLoading) return;
 
-    // Prevent updating with out-of-order or older timestamps which Lightweight Charts rejects
-    if (lastCandleTimeRef.current !== null && latestCandle.time < lastCandleTimeRef.current) {
-      return;
-    }
+    const tfSecondsMap: Record<string, number> = {
+      '1m': 60,
+      '5m': 300,
+      '15m': 900,
+      '1h': 3600,
+      '1D': 86400,
+      '1d': 86400,
+    };
+    const stepSeconds = tfSecondsMap[timeframe] || 60;
 
-    try {
-      seriesRef.current.update({
-        time: latestCandle.time as Time,
-        open: latestCandle.open,
-        high: latestCandle.high,
-        low: latestCandle.low,
-        close: latestCandle.close,
-      });
-      lastCandleTimeRef.current = latestCandle.time;
-    } catch (err) {
-      console.warn('Candle update skipped:', err);
+    if (stepSeconds === 60) {
+      // 1-minute native streaming
+      if (lastCandleTimeRef.current !== null && latestCandle.time < lastCandleTimeRef.current) {
+        return;
+      }
+
+      try {
+        seriesRef.current.update({
+          time: latestCandle.time as Time,
+          open: latestCandle.open,
+          high: latestCandle.high,
+          low: latestCandle.low,
+          close: latestCandle.close,
+        });
+        lastCandleTimeRef.current = latestCandle.time;
+      } catch (err) {
+        console.warn('Candle update skipped:', err);
+      }
+    } else {
+      // Higher timeframe (5m, 15m, 1h, 1D): align the timestamp to timeframe candle boundary
+      const alignedTime = (Math.floor(latestCandle.time / stepSeconds) * stepSeconds) as Time;
+      if (lastCandleTimeRef.current !== null && Number(alignedTime) < lastCandleTimeRef.current) {
+        return;
+      }
+
+      try {
+        seriesRef.current.update({
+          time: alignedTime,
+          open: latestCandle.open,
+          high: latestCandle.high,
+          low: latestCandle.low,
+          close: latestCandle.close,
+        });
+        lastCandleTimeRef.current = Number(alignedTime);
+      } catch (err) {
+        console.warn('Higher timeframe candle update skipped:', err);
+      }
     }
-  }, [latestCandle, isLoading]);
+  }, [latestCandle, isLoading, timeframe]);
 
   return (
     <div className="relative w-full h-full min-h-[220px]">
@@ -327,7 +358,7 @@ export const RetroCandleChart: React.FC<RetroCandleChartProps> = ({ pair, timefr
         <div className="absolute inset-0 bg-[#121212]/90 flex items-center justify-center z-20 font-mono text-[11px] text-crt-bullish">
           <div className="win-inset bg-black p-2 border border-[#333] flex items-center space-x-2 animate-pulse">
             <span className="w-2 h-2 rounded-full bg-crt-bullish"></span>
-            <span>[ HYDRATING {pair} 1M BINANCE KLINE STREAM... ]</span>
+            <span>[ HYDRATING {pair} {timeframe.toUpperCase()} BINANCE KLINE STREAM... ]</span>
           </div>
         </div>
       )}

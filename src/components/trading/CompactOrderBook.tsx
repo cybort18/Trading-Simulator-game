@@ -23,17 +23,57 @@ export const CompactOrderBook: React.FC<CompactOrderBookProps> = ({
   const priceDirection = useOrderBookStore((state) => state.priceDirection);
   const updateSpeedMs = useOrderBookStore((state) => state.updateSpeedMs);
   const setUpdateSpeedMs = useOrderBookStore((state) => state.setUpdateSpeedMs);
+  const precision = useOrderBookStore((state) => state.precision);
 
-  // Take top N asks and reverse so highest ask is on top and lowest ask sits directly above mid price
+  // Take top N asks and ensure exactly maxLevels items via continuous ladder
   const displayAsks = useMemo(() => {
-    const slice = asks.slice(0, maxLevels);
-    return [...slice].reverse();
-  }, [asks, maxLevels]);
+    if (asks.length === 0) return [];
+    const slice = [...asks.slice(0, maxLevels)];
+    const tickStep = precision > 0 ? precision : 1.0;
 
-  // Take top N bids starting from highest bid right below mid price
+    if (slice.length < maxLevels) {
+      let lastAsk = slice[slice.length - 1];
+      const avgQty = slice.reduce((sum, a) => sum + a.quantity, 0) / slice.length || 0.1;
+      while (slice.length < maxLevels) {
+        const nextPrice = Number((lastAsk.price + tickStep).toFixed(2));
+        const simulatedQty = Number((avgQty * (0.6 + (slice.length % 3) * 0.25)).toFixed(4));
+        const newLevel = {
+          price: nextPrice,
+          quantity: simulatedQty,
+          total: lastAsk.total + simulatedQty,
+          depthPercent: Math.min(95, lastAsk.depthPercent + 8),
+        };
+        slice.push(newLevel);
+        lastAsk = newLevel;
+      }
+    }
+    return slice.reverse();
+  }, [asks, maxLevels, precision]);
+
+  // Take top N bids and ensure exactly maxLevels items via continuous ladder
   const displayBids = useMemo(() => {
-    return bids.slice(0, maxLevels);
-  }, [bids, maxLevels]);
+    if (bids.length === 0) return [];
+    const slice = [...bids.slice(0, maxLevels)];
+    const tickStep = precision > 0 ? precision : 1.0;
+
+    if (slice.length < maxLevels) {
+      let lastBid = slice[slice.length - 1];
+      const avgQty = slice.reduce((sum, b) => sum + b.quantity, 0) / slice.length || 0.1;
+      while (slice.length < maxLevels) {
+        const nextPrice = Number((lastBid.price - tickStep).toFixed(2));
+        const simulatedQty = Number((avgQty * (0.6 + (slice.length % 3) * 0.25)).toFixed(4));
+        const newLevel = {
+          price: nextPrice,
+          quantity: simulatedQty,
+          total: lastBid.total + simulatedQty,
+          depthPercent: Math.min(95, lastBid.depthPercent + 8),
+        };
+        slice.push(newLevel);
+        lastBid = newLevel;
+      }
+    }
+    return slice;
+  }, [bids, maxLevels, precision]);
 
   const handlePriceClick = (price: number) => {
     soundFXService.playKeyClick();
@@ -88,15 +128,15 @@ export const CompactOrderBook: React.FC<CompactOrderBookProps> = ({
       </div>
 
       {/* Asks (Sell Orders) List */}
-      <div className="flex-1 flex flex-col justify-end space-y-[1px] min-h-[105px]">
+      <div className="flex-1 flex flex-col justify-between min-h-0 py-0.5 overflow-hidden">
         {displayAsks.length === 0 ? (
-          <div className="text-center py-4 text-[#555] text-[9px]">Connecting L2...</div>
+          <div className="text-center py-4 text-[#555] text-[9px] m-auto">Connecting L2...</div>
         ) : (
           displayAsks.map((ask, idx) => (
             <div
               key={`ask-${idx}-${ask.price}`}
               onClick={() => handlePriceClick(ask.price)}
-              className="relative grid grid-cols-2 px-1 py-[0.5px] hover:bg-red-900/30 cursor-pointer group transition-colors"
+              className="relative flex-1 grid grid-cols-2 items-center px-1 py-[0.5px] hover:bg-red-900/30 cursor-pointer group transition-colors"
               title={`Click to use Ask: $${formatPrice(ask.price)}`}
             >
               {/* Depth Visual Bar */}
@@ -104,10 +144,10 @@ export const CompactOrderBook: React.FC<CompactOrderBookProps> = ({
                 className="absolute right-0 top-0 bottom-0 bg-red-600/20 pointer-events-none transition-all duration-200 ease-out"
                 style={{ width: `${Math.min(100, Math.max(5, ask.depthPercent))}%` }}
               />
-              <span className="text-[#FF4444] font-bold relative z-10">
+              <span className="text-[#FF4444] font-bold relative z-10 leading-none">
                 {formatPrice(ask.price)}
               </span>
-              <span className="text-right text-[#C0C0C0] relative z-10 group-hover:text-white">
+              <span className="text-right text-[#C0C0C0] relative z-10 group-hover:text-white leading-none">
                 {formatQty(ask.quantity)}
               </span>
             </div>
@@ -141,15 +181,15 @@ export const CompactOrderBook: React.FC<CompactOrderBookProps> = ({
       </div>
 
       {/* Bids (Buy Orders) List */}
-      <div className="flex-1 flex flex-col justify-start space-y-[1px] min-h-[105px]">
+      <div className="flex-1 flex flex-col justify-between min-h-0 py-0.5 overflow-hidden">
         {displayBids.length === 0 ? (
-          <div className="text-center py-4 text-[#555] text-[9px]">Connecting L2...</div>
+          <div className="text-center py-4 text-[#555] text-[9px] m-auto">Connecting L2...</div>
         ) : (
           displayBids.map((bid, idx) => (
             <div
               key={`bid-${idx}-${bid.price}`}
               onClick={() => handlePriceClick(bid.price)}
-              className="relative grid grid-cols-2 px-1 py-[0.5px] hover:bg-green-900/30 cursor-pointer group transition-colors"
+              className="relative flex-1 grid grid-cols-2 items-center px-1 py-[0.5px] hover:bg-green-900/30 cursor-pointer group transition-colors"
               title={`Click to use Bid: $${formatPrice(bid.price)}`}
             >
               {/* Depth Visual Bar */}
@@ -157,10 +197,10 @@ export const CompactOrderBook: React.FC<CompactOrderBookProps> = ({
                 className="absolute right-0 top-0 bottom-0 bg-green-600/20 pointer-events-none transition-all duration-200 ease-out"
                 style={{ width: `${Math.min(100, Math.max(5, bid.depthPercent))}%` }}
               />
-              <span className="text-[#00FF66] font-bold relative z-10">
+              <span className="text-[#00FF66] font-bold relative z-10 leading-none">
                 {formatPrice(bid.price)}
               </span>
-              <span className="text-right text-[#C0C0C0] relative z-10 group-hover:text-white">
+              <span className="text-right text-[#C0C0C0] relative z-10 group-hover:text-white leading-none">
                 {formatQty(bid.quantity)}
               </span>
             </div>
