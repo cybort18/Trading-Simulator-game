@@ -955,8 +955,8 @@ export const TurboTradeWindow: React.FC = () => {
             </div>
           )}
 
-          {/* Execution Action Buttons (Side-by-Side to Prevent Any Clipping) */}
-          <div className="grid grid-cols-2 gap-1 pt-0.5 flex-shrink-0">
+          {/* Execution Action Buttons (Stacked Vertically: Long Above, Short Below) */}
+          <div className="flex flex-col gap-1 pt-0.5 flex-shrink-0">
             <button
               disabled={isSubmitting}
               onClick={() => {
@@ -1001,13 +1001,13 @@ export const TurboTradeWindow: React.FC = () => {
                   setTimeout(() => setIsSubmitting(false), 300);
                 }
               }}
-              className={`win-btn bg-[#008531] text-white font-bold py-1.5 px-1 flex items-center justify-center space-x-1 hover:bg-[#009938] active:translate-x-0.5 active:translate-y-0.5 shadow ${
+              className={`win-btn bg-[#008531] text-white font-bold py-1.5 px-2 flex items-center justify-center space-x-1.5 hover:bg-[#009938] active:translate-x-0.5 active:translate-y-0.5 shadow ${
                 isSubmitting ? 'opacity-60 cursor-not-allowed' : ''
               }`}
             >
-              <PixelIcon name="arrow_up" size={11} className="text-crt-bullish" />
-              <span className="text-[10px] tracking-wide uppercase font-extrabold">
-                {isSubmitting ? 'EXEC...' : 'BUY / LONG'}
+              <PixelIcon name="arrow_up" size={12} className="text-crt-bullish" />
+              <span className="text-[10.5px] tracking-wide uppercase font-extrabold">
+                {isSubmitting ? 'EXECUTING...' : 'OPEN LONG (BUY)'}
               </span>
             </button>
 
@@ -1055,13 +1055,13 @@ export const TurboTradeWindow: React.FC = () => {
                   setTimeout(() => setIsSubmitting(false), 300);
                 }
               }}
-              className={`win-btn bg-[#BA1A1A] text-white font-bold py-1.5 px-1 flex items-center justify-center space-x-1 hover:bg-[#D32F2F] active:translate-x-0.5 active:translate-y-0.5 shadow ${
+              className={`win-btn bg-[#BA1A1A] text-white font-bold py-1.5 px-2 flex items-center justify-center space-x-1.5 hover:bg-[#D32F2F] active:translate-x-0.5 active:translate-y-0.5 shadow ${
                 isSubmitting ? 'opacity-60 cursor-not-allowed' : ''
               }`}
             >
-              <PixelIcon name="arrow_down" size={11} className="text-[#FFAAAA]" />
-              <span className="text-[10px] tracking-wide uppercase font-extrabold">
-                {isSubmitting ? 'EXEC...' : 'SELL / SHORT'}
+              <PixelIcon name="arrow_down" size={12} className="text-[#FFAAAA]" />
+              <span className="text-[10.5px] tracking-wide uppercase font-extrabold">
+                {isSubmitting ? 'EXECUTING...' : 'OPEN SHORT (SELL)'}
               </span>
             </button>
           </div>
