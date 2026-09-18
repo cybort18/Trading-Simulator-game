@@ -8,6 +8,8 @@ import { useWindowStore } from '@/stores/useWindowStore';
 import { fundingRateEngine } from '@/services/FundingRateEngine';
 import { TradingPair } from '@/types/market';
 import { RetroCandleChart } from '@/components/trading/RetroCandleChart';
+import { CompactOrderBook } from '@/components/trading/CompactOrderBook';
+import { binanceDepthService } from '@/services/BinanceDepthService';
 import {
   calculateLiquidationPrice,
   calculateQuantity,
@@ -104,6 +106,27 @@ export const TurboTradeWindow: React.FC = () => {
     const timer = setInterval(updateCountdown, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Synchronize real-time Level-2 Binance Depth Stream for integrated Order Book
+  useEffect(() => {
+    binanceDepthService.start(selectedPair);
+    return () => {
+      const isStandaloneOpen = useWindowStore.getState().windows.orderbook?.isOpen ?? false;
+      if (!isStandaloneOpen) {
+        binanceDepthService.stop();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    binanceDepthService.switchPair(selectedPair);
+  }, [selectedPair]);
+
+  const handleOrderBookPriceSelect = (price: number) => {
+    soundFXService.playKeyClick();
+    setOrderType('limit');
+    setLimitPriceInput(price.toFixed(2));
+  };
 
   const mmr = MAINTENANCE_MARGIN_RATES[selectedPair] || DEFAULT_MMR;
   const effectiveEntryPrice = orderType === 'limit' && parseFloat(limitPriceInput) > 0
@@ -346,387 +369,243 @@ export const TurboTradeWindow: React.FC = () => {
         </>
       }
     >
-      <div className="flex-1 flex flex-col md:flex-row gap-1 h-full min-h-0 text-black font-ui">
+      <div className="flex-1 flex flex-col gap-1 h-full min-h-0 text-black font-ui overflow-hidden">
         {/* =================================================================== */}
-        {/* LEFT PANEL: Market Selector & Live Metrics (20%)                   */}
+        {/* TOP TRADING DECK (Market Info, Chart, Order Book, Order Form)       */}
         {/* =================================================================== */}
-        <div className="w-full md:w-[220px] flex flex-col gap-1 flex-shrink-0">
-          {/* Pair Selector Strip */}
-          <div className="win-inset bg-win-base p-1 flex flex-col gap-1">
-            <div className="font-bold text-[10px] text-black uppercase">Select Contract:</div>
-            <div className="grid grid-cols-3 gap-1">
-              {(['BTCUSDT', 'ETHUSDT', 'SOLUSDT'] as const).map((pair) => (
-                <button
-                  key={pair}
-                  onClick={() => setSelectedPair(pair)}
-                  className={`py-1 text-[10px] font-bold ${
-                    selectedPair === pair
-                      ? 'win-btn-pressed bg-win-pressed font-extrabold text-titlebar-navy'
-                      : 'win-btn bg-win-base text-black'
-                  }`}
-                >
-                  {pair.replace('USDT', '')}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Real-time Live Ticker Card */}
-          <div className="win-inset-deep p-2 text-white flex flex-col gap-1.5 crt-grid bg-[#121212]">
-            <div className="flex justify-between items-center text-[10px] text-[#E0E0E0]">
-              <span className="font-bold font-mono text-white">{pairLabelMap[selectedPair]} PERP</span>
-              <span className="win-inset px-1 bg-[#1A1A1A] text-crt-bullish text-[9px] font-mono font-bold">
-                {connectionStatus === 'CONNECTED' ? 'LIVE ●' : connectionStatus}
-              </span>
-            </div>
-
-            {/* Dynamic Tick Color Flash Monospace Price Readout */}
-            <div
-              className={`font-mono text-[22px] font-bold leading-none transition-colors duration-150 ${
-                direction === 'up'
-                  ? 'text-crt-bullish crt-glow-green'
-                  : direction === 'down'
-                  ? 'text-crt-bearish crt-glow-red'
-                  : 'text-white'
-              }`}
-            >
-              $
-              {currentPrice.toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-            </div>
-
-            <div className="flex items-center justify-between text-[11px] font-mono">
-              <span className="text-[#E0E0E0] font-semibold">24h Change:</span>
-              <span
-                className={`font-bold ${
-                  currentTicker.change24h >= 0 ? 'text-crt-bullish' : 'text-crt-bearish'
-                }`}
-              >
-                {currentTicker.change24h >= 0 ? '+' : ''}
-                {currentTicker.change24h.toFixed(2)}%
-              </span>
-            </div>
-
-            <div className="border-t border-[#333] pt-1 flex flex-col gap-0.5 text-[10px] font-mono text-[#D0D0D0]">
-              <div className="flex justify-between">
-                <span className="text-[#D0D0D0]">24h High:</span>
-                <span className="text-white font-bold">${currentTicker.high24h.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#D0D0D0]">24h Low:</span>
-                <span className="text-white font-bold">${currentTicker.low24h.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#D0D0D0]">24h Volume:</span>
-                <span className="text-white font-bold">
-                  {currentTicker.volume24h.toLocaleString('en-US', { maximumFractionDigits: 1 })}
-                </span>
-              </div>
-              <div className="flex justify-between border-t border-[#2A2A2A] pt-0.5 mt-0.5">
-                <span className="text-[#D0D0D0]">Funding Rate:</span>
-                <span className="text-crt-amber font-bold">
-                  {(currentTicker.fundingRate * 100).toFixed(4)}% in {fundingCountdown}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Account Margin Inset */}
-          <div className="win-inset bg-win-base p-1.5 flex flex-col gap-1 text-[10px]">
-            <div className="flex justify-between">
-              <span className="text-black font-bold">Account Equity:</span>
-              <span className="font-mono font-bold text-titlebar-navy">{equity.toFixed(2)} USDT</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-black font-bold">Available Margin:</span>
-              <span className="font-mono font-bold text-black">{availableMargin.toFixed(2)} USDT</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-black font-bold">Position Margin:</span>
-              <span className="font-mono font-bold text-crt-amber">{lockedMargin.toFixed(2)} USDT</span>
-            </div>
-          </div>
-        </div>
-
-        {/* =================================================================== */}
-        {/* CENTER PANEL: Interactive Lightweight Candlestick Chart (55%)       */}
-        {/* =================================================================== */}
-        <div className="flex-1 flex flex-col gap-1 min-w-0">
-          {/* Chart Viewport & Toolbar */}
-          <div className="flex-1 win-inset-deep p-1 flex flex-col min-h-[280px] relative overflow-hidden bg-[#121212]">
-            {/* Automated TP/SL Execution Toast */}
-            {tpSlToast && (
-              <div
-                className={`absolute top-9 left-2 right-2 z-30 p-1.5 border font-mono text-[10.5px] font-bold flex items-center justify-between shadow-lg ${
-                  tpSlToast.type === 'TAKE_PROFIT'
-                    ? 'bg-[#003311] text-[#00FF66] border-[#00FF66]'
-                    : 'bg-[#331100] text-[#FFAA00] border-[#FFAA00]'
-                }`}
-              >
-                <div className="flex items-center space-x-1.5">
-                  <span className="text-[12px]">{tpSlToast.type === 'TAKE_PROFIT' ? '🎯' : '🛡'}</span>
-                  <span>{tpSlToast.message}</span>
-                </div>
-                <button
-                  onClick={() => setTpSlToast(null)}
-                  className="win-btn text-[9px] px-1 py-0 font-bold text-black ml-2"
-                >
-                  ✕
-                </button>
-              </div>
-            )}
-
-            {/* Chart Toolbar */}
-            <div className="flex items-center justify-between pb-1 border-b border-[#2A2A2A] text-[10px] text-white">
-              <div className="flex items-center space-x-1">
-                <span className="font-bold text-crt-amber font-mono mr-1.5">
-                  {pairLabelMap[selectedPair]}
-                </span>
-                {['1m', '5m', '15m', '1h', '1D'].map((tf) => (
+        <div className="flex-1 flex flex-col md:flex-row gap-1 min-h-[340px] overflow-hidden">
+          {/* =================================================================== */}
+          {/* LEFT PANEL: Market Selector, Live Metrics & 24h Range Meter        */}
+          {/* =================================================================== */}
+          <div className="w-full md:w-[195px] flex flex-col gap-1 flex-shrink-0">
+            {/* Pair Selector Strip */}
+            <div className="win-inset bg-win-base p-1 flex flex-col gap-1">
+              <div className="font-bold text-[10px] text-black uppercase">Select Contract:</div>
+              <div className="grid grid-cols-3 gap-1">
+                {(['BTCUSDT', 'ETHUSDT', 'SOLUSDT'] as const).map((pair) => (
                   <button
-                    key={tf}
-                    onClick={() => setTimeframe(tf)}
-                    className={`px-1.5 py-0.5 text-[9px] font-mono ${
-                      timeframe === tf
-                        ? 'win-btn-pressed bg-[#333] text-crt-bullish font-bold border border-[#555]'
+                    key={pair}
+                    onClick={() => setSelectedPair(pair)}
+                    className={`py-1 text-[10px] font-bold ${
+                      selectedPair === pair
+                        ? 'win-btn-pressed bg-win-pressed font-extrabold text-titlebar-navy'
                         : 'win-btn bg-win-base text-black'
                     }`}
                   >
-                    {tf}
+                    {pair.replace('USDT', '')}
                   </button>
                 ))}
               </div>
+            </div>
 
-              <div className="text-[10px] text-[#C0C0C0] font-mono hidden sm:block">
-                BINANCE PERPETUAL • REALTIME 1M WS
+            {/* Real-time Live Ticker Card */}
+            <div className="win-inset-deep p-2 text-white flex flex-col gap-1.5 crt-grid bg-[#121212]">
+              <div className="flex justify-between items-center text-[10px] text-[#E0E0E0]">
+                <span className="font-bold font-mono text-white">{pairLabelMap[selectedPair]} PERP</span>
+                <span className="win-inset px-1 bg-[#1A1A1A] text-crt-bullish text-[9px] font-mono font-bold">
+                  {connectionStatus === 'CONNECTED' ? 'LIVE ●' : connectionStatus}
+                </span>
               </div>
-            </div>
 
-            {/* TradingView Canvas Mount */}
-            <div className="flex-1 w-full h-full min-h-[220px] relative">
-              <RetroCandleChart pair={selectedPair} timeframe={timeframe} />
-            </div>
-
-            {/* Real-time Chart Footer Sub-status */}
-            <div className="flex items-center justify-between text-[10px] font-mono text-[#C0C0C0] border-t border-[#222] pt-0.5">
-              <span>
-                MARK: $
+              {/* Dynamic Tick Color Flash Monospace Price Readout */}
+              <div
+                className={`font-mono text-[20px] font-bold leading-none transition-colors duration-150 ${
+                  direction === 'up'
+                    ? 'text-crt-bullish crt-glow-green'
+                    : direction === 'down'
+                    ? 'text-crt-bearish crt-glow-red'
+                    : 'text-white'
+                }`}
+              >
+                $
                 {currentPrice.toLocaleString('en-US', {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}
-              </span>
-              <span className="text-crt-amber font-bold">
-                EST. LONG LIQ: ${estLiqLong.toFixed(2)} | SHORT LIQ: ${estLiqShort.toFixed(2)}
-              </span>
+              </div>
+
+              <div className="flex items-center justify-between text-[10.5px] font-mono">
+                <span className="text-[#E0E0E0] font-semibold">24h Change:</span>
+                <span
+                  className={`font-bold ${
+                    currentTicker.change24h >= 0 ? 'text-crt-bullish' : 'text-crt-bearish'
+                  }`}
+                >
+                  {currentTicker.change24h >= 0 ? '+' : ''}
+                  {currentTicker.change24h.toFixed(2)}%
+                </span>
+              </div>
+
+              <div className="border-t border-[#333] pt-1 flex flex-col gap-0.5 text-[9.5px] font-mono text-[#D0D0D0]">
+                <div className="flex justify-between">
+                  <span className="text-[#D0D0D0]">24h High:</span>
+                  <span className="text-white font-bold">${currentTicker.high24h.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#D0D0D0]">24h Low:</span>
+                  <span className="text-white font-bold">${currentTicker.low24h.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#D0D0D0]">24h Volume:</span>
+                  <span className="text-white font-bold">
+                    {currentTicker.volume24h.toLocaleString('en-US', { maximumFractionDigits: 1 })}
+                  </span>
+                </div>
+                <div className="flex justify-between border-t border-[#2A2A2A] pt-0.5 mt-0.5">
+                  <span className="text-[#D0D0D0]">Funding Rate:</span>
+                  <span className="text-crt-amber font-bold">
+                    {(currentTicker.fundingRate * 100).toFixed(4)}% in {fundingCountdown}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Account Margin Inset */}
+            <div className="win-inset bg-win-base p-1.5 flex flex-col gap-1 text-[9.5px]">
+              <div className="flex justify-between">
+                <span className="text-black font-bold">Account Equity:</span>
+                <span className="font-mono font-bold text-titlebar-navy">{equity.toFixed(2)} USDT</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-black font-bold">Available Margin:</span>
+                <span className="font-mono font-bold text-black">{availableMargin.toFixed(2)} USDT</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-black font-bold">Position Margin:</span>
+                <span className="font-mono font-bold text-crt-amber">{lockedMargin.toFixed(2)} USDT</span>
+              </div>
+            </div>
+
+            {/* 24h High/Low Range Meter & Market Statistics (Utilizes empty space) */}
+            <div className="win-inset-deep bg-[#121212] p-1.5 flex-1 flex flex-col justify-between text-[9px] font-mono text-[#AAA]">
+              <div className="flex flex-col gap-1">
+                <div className="flex justify-between items-center text-[#DDD] font-bold border-b border-[#252525] pb-0.5">
+                  <span>24H PRICE RANGE</span>
+                  <span className="text-[8px] text-crt-bullish">DYNAMIC</span>
+                </div>
+                <div className="flex justify-between text-[8.5px]">
+                  <span className="text-[#FF4444]">${currentTicker.low24h.toFixed(1)}</span>
+                  <span className="text-[#00FF66]">${currentTicker.high24h.toFixed(1)}</span>
+                </div>
+                {/* Visual Position Gauge */}
+                {(() => {
+                  const range = currentTicker.high24h - currentTicker.low24h;
+                  const pos = range > 0 ? Math.max(2, Math.min(98, ((currentPrice - currentTicker.low24h) / range) * 100)) : 50;
+                  return (
+                    <div className="w-full h-2 bg-[#252525] relative border border-[#333]">
+                      <div
+                        className="absolute top-0 bottom-0 bg-titlebar-navy"
+                        style={{ width: `${pos}%` }}
+                      />
+                      <div
+                        className="absolute top-[-2px] bottom-[-2px] w-1.5 bg-amber-400 border border-black shadow"
+                        style={{ left: `calc(${pos}% - 3px)` }}
+                        title={`Current: $${currentPrice.toFixed(2)}`}
+                      />
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <div className="border-t border-[#252525] pt-1 mt-1 flex flex-col gap-0.5 text-[8.5px]">
+                <div className="flex justify-between">
+                  <span>24h Turnover:</span>
+                  <span className="text-white font-bold">
+                    ${((currentTicker.volume24h * currentPrice) / 1000000).toFixed(2)}M
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Execution:</span>
+                  <span className="text-crt-bullish font-bold">ZERO SLIPPAGE</span>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Bottom Tabs: Open Positions / Order History */}
-          <div className="h-[160px] win-inset bg-win-base p-1 flex flex-col flex-shrink-0">
-            {/* Tabs Header */}
-            <div className="flex items-center space-x-1 border-b border-bevel-shadow pb-1">
-              <button
-                onClick={() => setBottomTab('positions')}
-                className={`px-3 py-0.5 text-[10px] font-bold ${
-                  bottomTab === 'positions'
-                    ? 'win-btn-pressed bg-win-pressed text-titlebar-navy'
-                    : 'win-btn bg-win-base text-black'
-                }`}
-              >
-                Open Positions ({positions.length})
-              </button>
-              <button
-                onClick={() => setBottomTab('history')}
-                className={`px-3 py-0.5 text-[10px] font-bold ${
-                  bottomTab === 'history'
-                    ? 'win-btn-pressed bg-win-pressed text-titlebar-navy'
-                    : 'win-btn bg-win-base text-black'
-                }`}
-              >
-                Order History ({tradeHistory.length})
-              </button>
-            </div>
+          {/* =================================================================== */}
+          {/* CENTER PANEL: Interactive Candlestick Chart (Full Height)          */}
+          {/* =================================================================== */}
+          <div className="flex-1 flex flex-col gap-1 min-w-0">
+            {/* Chart Viewport & Toolbar */}
+            <div className="flex-1 win-inset-deep p-1 flex flex-col min-h-[300px] relative overflow-hidden bg-[#121212]">
+              {/* Automated TP/SL Execution Toast */}
+              {tpSlToast && (
+                <div
+                  className={`absolute top-9 left-2 right-2 z-30 p-1.5 border font-mono text-[10.5px] font-bold flex items-center justify-between shadow-lg ${
+                    tpSlToast.type === 'TAKE_PROFIT'
+                      ? 'bg-[#003311] text-[#00FF66] border-[#00FF66]'
+                      : 'bg-[#331100] text-[#FFAA00] border-[#FFAA00]'
+                  }`}
+                >
+                  <div className="flex items-center space-x-1.5">
+                    <span className="text-[12px]">{tpSlToast.type === 'TAKE_PROFIT' ? '🎯' : '🛡'}</span>
+                    <span>{tpSlToast.message}</span>
+                  </div>
+                  <button
+                    onClick={() => setTpSlToast(null)}
+                    className="win-btn text-[9px] px-1 py-0 font-bold text-black ml-2"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
 
-            {/* Positions Table */}
-            {bottomTab === 'positions' ? (
-              positions.length === 0 ? (
-                <div className="flex-1 p-4 font-mono text-[11px] text-[#222] font-bold flex items-center justify-center">
-                  NO ACTIVE OPEN POSITIONS. SELECT CONTRACT &amp; EXECUTE AN ORDER ON RIGHT PANEL.
+              {/* Chart Toolbar */}
+              <div className="flex items-center justify-between pb-1 border-b border-[#2A2A2A] text-[10px] text-white">
+                <div className="flex items-center space-x-1">
+                  <span className="font-bold text-crt-amber font-mono mr-1.5">
+                    {pairLabelMap[selectedPair]}
+                  </span>
+                  {['1m', '5m', '15m', '1h', '1D'].map((tf) => (
+                    <button
+                      key={tf}
+                      onClick={() => setTimeframe(tf)}
+                      className={`px-1.5 py-0.5 text-[9px] font-mono ${
+                        timeframe === tf
+                          ? 'win-btn-pressed bg-[#333] text-crt-bullish font-bold border border-[#555]'
+                          : 'win-btn bg-win-base text-black'
+                      }`}
+                    >
+                      {tf}
+                    </button>
+                  ))}
                 </div>
-              ) : (
-                <div className="flex-1 overflow-auto mt-1 win-inset-deep bg-[#121212] p-0.5">
-                  <table className="w-full text-left font-mono text-[10px] text-white">
-                    <thead className="bg-[#202020] text-[#E0E0E0] border-b-2 border-[#404040] sticky top-0 font-bold">
-                      <tr>
-                        <th className="p-1">Pair</th>
-                        <th className="p-1">Direction</th>
-                        <th className="p-1">Size</th>
-                        <th className="p-1">Entry</th>
-                        <th className="p-1">Mark</th>
-                        <th className="p-1">Liq Price</th>
-                        <th className="p-1">TP / SL</th>
-                        <th className="p-1">Margin</th>
-                        <th className="p-1">uPnL (ROE)</th>
-                        <th className="p-1 text-right">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#1F1F1F]">
-                      {positions.map((pos) => {
-                        const mark = pos.markPrice || (pos.pair === selectedPair ? currentPrice : pos.entryPrice);
-                        const isBullish = pos.unrealizedPnl >= 0;
-                        return (
-                          <tr key={pos.id} className="hover:bg-[#1A1A1A]">
-                            <td className="p-1 font-bold text-white">{pairLabelMap[pos.pair]}</td>
-                            <td className="p-1">
-                              <span
-                                className={`px-1 py-0.2 border font-bold ${
-                                  pos.direction === 'LONG'
-                                    ? 'bg-[#003311] text-[#00FF66] border-[#00FF66]'
-                                    : 'bg-[#330000] text-[#FF3333] border-[#FF3333]'
-                                }`}
-                              >
-                                {pos.direction} {pos.leverage}x
-                              </span>
-                            </td>
-                            <td className="p-1 text-[#E0E0E0]">{pos.quantity.toFixed(4)}</td>
-                            <td className="p-1 text-[#E0E0E0]">${pos.entryPrice.toFixed(2)}</td>
-                            <td className="p-1 font-bold text-white">${mark.toFixed(2)}</td>
-                            <td className="p-1 text-crt-amber font-bold">${pos.liquidationPrice.toFixed(2)}</td>
-                            <td className="p-1">
-                              <div className="flex flex-col gap-0.5 text-[8.5px]">
-                                {pos.tpPrice ? (
-                                  <span className="text-[#00FF66] font-bold">TP: ${pos.tpPrice.toFixed(2)}</span>
-                                ) : (
-                                  <span className="text-[#666]">TP: --</span>
-                                )}
-                                {pos.slPrice ? (
-                                  <span className="text-[#FF3333] font-bold">SL: ${pos.slPrice.toFixed(2)}</span>
-                                ) : (
-                                  <span className="text-[#666]">SL: --</span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="p-1 text-[#E0E0E0]">{pos.initialMargin.toFixed(2)} USDT</td>
-                            <td className={`p-1 font-bold ${isBullish ? 'text-crt-bullish' : 'text-crt-bearish'}`}>
-                              {isBullish ? '+' : ''}${pos.unrealizedPnl.toFixed(2)} ({isBullish ? '+' : ''}{pos.roe.toFixed(2)}%)
-                            </td>
-                            <td className="p-1 text-right">
-                              <div className="flex items-center justify-end space-x-1">
-                                <button
-                                  onClick={() => {
-                                    setTpSlModalPosition(pos);
-                                    setModalTpPrice(pos.tpPrice ? pos.tpPrice.toFixed(2) : '');
-                                    setModalSlPrice(pos.slPrice ? pos.slPrice.toFixed(2) : '');
-                                    setTpSlError(null);
-                                  }}
-                                  className="win-btn text-[9px] px-1.5 py-0.5 text-black font-bold active:translate-x-0.5 active:translate-y-0.5 hover:bg-[#E0E0E0]"
-                                  title="Set Take Profit & Stop Loss Target"
-                                >
-                                  TP/SL
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setSelectedFlexTrade(pos);
-                                    openWindow('flexcard');
-                                    focusWindow('flexcard');
-                                  }}
-                                  className="win-btn text-[9px] px-1.5 py-0.5 text-titlebar-navy font-bold active:translate-x-0.5 active:translate-y-0.5"
-                                  title="Share PnL Flex Card"
-                                >
-                                  Share ↗
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    closePosition(pos.id, mark);
-                                    soundFXService.playOrderExecuted();
-                                  }}
-                                  className="win-btn text-[9px] px-1.5 py-0.5 text-error font-bold active:translate-x-0.5 active:translate-y-0.5"
-                                >
-                                  Close [X]
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+
+                <div className="text-[10px] text-[#C0C0C0] font-mono hidden sm:block">
+                  BINANCE PERPETUAL • REALTIME 1M WS
                 </div>
-              )
-            ) : (
-              tradeHistory.length === 0 ? (
-                <div className="flex-1 p-4 font-mono text-[11px] text-[#222] font-bold flex items-center justify-center">
-                  NO PAST ORDERS RECORDED IN THIS SESSION.
-                </div>
-              ) : (
-                <div className="flex-1 overflow-auto mt-1 win-inset-deep bg-[#121212] p-0.5">
-                  <table className="w-full text-left font-mono text-[10px] text-white">
-                    <thead className="bg-[#202020] text-[#E0E0E0] border-b-2 border-[#404040] sticky top-0 font-bold">
-                      <tr>
-                        <th className="p-1">Time</th>
-                        <th className="p-1">Pair</th>
-                        <th className="p-1">Side</th>
-                        <th className="p-1">Entry</th>
-                        <th className="p-1">Exit</th>
-                        <th className="p-1">Realized PnL</th>
-                        <th className="p-1">ROE %</th>
-                        <th className="p-1 text-right">Status / Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#1F1F1F]">
-                      {tradeHistory.map((item) => (
-                        <tr key={item.id} className="hover:bg-[#1A1A1A]">
-                          <td className="p-1 text-[#C0C0C0]">{new Date(item.closedAt).toLocaleTimeString()}</td>
-                          <td className="p-1 font-bold text-white">{pairLabelMap[item.pair]}</td>
-                          <td className="p-1">
-                            <span className={`font-bold ${item.direction === 'LONG' ? 'text-[#00FF66]' : 'text-[#FF3333]'}`}>
-                              {item.direction} {item.leverage}x
-                            </span>
-                          </td>
-                          <td className="p-1 text-[#E0E0E0]">${item.entryPrice.toFixed(2)}</td>
-                          <td className="p-1 text-[#E0E0E0]">${item.exitPrice.toFixed(2)}</td>
-                          <td className={`p-1 font-bold ${item.realizedPnl >= 0 ? 'text-crt-bullish' : 'text-crt-bearish'}`}>
-                            {item.realizedPnl >= 0 ? '+' : ''}${item.realizedPnl.toFixed(2)}
-                          </td>
-                          <td className={`p-1 font-bold ${item.roe >= 0 ? 'text-crt-bullish' : 'text-crt-bearish'}`}>
-                            {item.roe >= 0 ? '+' : ''}{item.roe.toFixed(2)}%
-                          </td>
-                          <td className="p-1 text-right">
-                            <div className="flex items-center justify-end space-x-1">
-                              <span
-                                className={`px-1 py-0.2 text-[8px] font-bold border ${
-                                  item.status === 'LIQUIDATED'
-                                    ? 'bg-[#440000] text-[#FF6666] border-[#FF3333]'
-                                    : 'bg-[#003311] text-[#00FF66] border-[#00FF66]'
-                                }`}
-                              >
-                                {item.status}
-                              </span>
-                              <button
-                                onClick={() => {
-                                  setSelectedFlexTrade(item);
-                                  openWindow('flexcard');
-                                  focusWindow('flexcard');
-                                }}
-                                className="win-btn text-[8px] px-1 py-0.2 text-titlebar-navy font-bold active:translate-x-0.5 active:translate-y-0.5"
-                                title="Share Flex Card"
-                              >
-                                Share ↗
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )
-            )}
+              </div>
+
+              {/* TradingView Canvas Mount */}
+              <div className="flex-1 w-full h-full min-h-[220px] relative">
+                <RetroCandleChart pair={selectedPair} timeframe={timeframe} />
+              </div>
+
+              {/* Real-time Chart Footer Sub-status */}
+              <div className="flex items-center justify-between text-[10px] font-mono text-[#C0C0C0] border-t border-[#222] pt-0.5">
+                <span>
+                  MARK: $
+                  {currentPrice.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
+                <span className="text-crt-amber font-bold">
+                  EST. LONG LIQ: ${estLiqLong.toFixed(2)} | SHORT LIQ: ${estLiqShort.toFixed(2)}
+                </span>
+              </div>
+            </div>
           </div>
-        </div>
+
+          {/* =================================================================== */}
+          {/* COLUMN 3: Real-Time Level-2 Order Book (Gate.io-Style Integration)  */}
+          {/* =================================================================== */}
+          <div className="w-full md:w-[185px] flex flex-col flex-shrink-0">
+            <CompactOrderBook
+              onSelectPrice={handleOrderBookPriceSelect}
+              className="flex-1 h-full"
+            />
+          </div>
 
         {/* =================================================================== */}
         {/* RIGHT PANEL: Order Execution Form (25%)                             */}
@@ -1193,6 +1072,270 @@ export const TurboTradeWindow: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* =================================================================== */}
+      {/* FULL-WIDTH BOTTOM WORKSPACE: Open Positions & Order History         */}
+      {/* =================================================================== */}
+      <div className="h-[175px] win-inset bg-win-base p-1 flex flex-col flex-shrink-0">
+        {/* Tab Navigation Header */}
+        <div className="flex items-center justify-between border-b border-[#808080] pb-1 px-1 flex-shrink-0">
+          <div className="flex items-center space-x-1">
+            <button
+              onClick={() => setBottomTab('positions')}
+              className={`px-3 py-0.5 text-[10px] font-bold ${
+                bottomTab === 'positions'
+                  ? 'win-btn-pressed bg-win-pressed text-titlebar-navy border-t-2 border-l-2 border-r-2 border-b-0'
+                  : 'win-btn text-black'
+              }`}
+            >
+              Open Positions ({positions.length})
+            </button>
+            <button
+              onClick={() => setBottomTab('history')}
+              className={`px-3 py-0.5 text-[10px] font-bold ${
+                bottomTab === 'history'
+                  ? 'win-btn-pressed bg-win-pressed text-titlebar-navy border-t-2 border-l-2 border-r-2 border-b-0'
+                  : 'win-btn text-black'
+              }`}
+            >
+              Order History ({tradeHistory.length})
+            </button>
+          </div>
+
+          <div className="flex items-center space-x-2 text-[9px] font-mono text-[#555]">
+            <span>MARGIN CALL SAFETY: REALTIME SCANNER ACTIVE</span>
+            <span className="text-crt-bullish font-bold">● ONLINE</span>
+          </div>
+        </div>
+
+        {/* Tab Content Display Area */}
+        {bottomTab === 'positions' ? (
+          positions.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center font-mono text-[10.5px] text-[#666] py-3">
+              <span className="text-[#888] font-bold">NO OPEN PERPETUAL CONTRACTS</span>
+              <span className="text-[9px] text-[#555] mt-0.5">
+                Select leverage, margin, and order type above to open a position.
+              </span>
+            </div>
+          ) : (
+            <div className="flex-1 overflow-auto win-inset-deep bg-[#121212] p-0.5 mt-0.5">
+              <table className="w-full text-left font-mono text-[10px] text-white border-collapse min-w-[920px]">
+                <thead className="bg-[#202020] text-[#E0E0E0] border-b border-[#404040] sticky top-0 font-bold z-10">
+                  <tr>
+                    <th className="p-1 pl-1.5">Contract</th>
+                    <th className="p-1">Size</th>
+                    <th className="p-1">Entry Price</th>
+                    <th className="p-1">Mark Price</th>
+                    <th className="p-1">Est. Liq Price</th>
+                    <th className="p-1">Margin</th>
+                    <th className="p-1">TP / SL</th>
+                    <th className="p-1">Unrealized PnL</th>
+                    <th className="p-1 text-right pr-1.5">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#1F1F1F]">
+                  {positions.map((pos) => {
+                    const mark = pos.markPrice || (pos.pair === selectedPair ? currentPrice : pos.entryPrice);
+                    const isBullish = pos.unrealizedPnl >= 0;
+                    return (
+                      <tr key={pos.id} className="hover:bg-[#1A1A1A] transition-colors">
+                        {/* Contract */}
+                        <td className="p-1 pl-1.5">
+                          <div className="flex items-center space-x-1.5">
+                            <span className="font-bold text-crt-amber">{pairLabelMap[pos.pair]}</span>
+                            <span
+                              className={`px-1 py-0.2 text-[8.5px] font-bold border ${
+                                pos.direction === 'LONG'
+                                  ? 'bg-[#003311] text-[#00FF66] border-[#00FF66]'
+                                  : 'bg-[#330000] text-[#FF4444] border-[#FF4444]'
+                              }`}
+                            >
+                              {pos.direction} {pos.leverage}x
+                            </span>
+                            <span className="text-[8px] px-1 bg-[#252525] text-[#AAA] border border-[#3A3A3A]">
+                              {pos.marginMode}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Size */}
+                        <td className="p-1 text-[#E0E0E0]">
+                          {pos.quantity.toFixed(4)} {pos.pair.replace('USDT', '')}
+                        </td>
+
+                        {/* Entry Price */}
+                        <td className="p-1 text-[#E0E0E0] font-medium">
+                          ${pos.entryPrice.toFixed(2)}
+                        </td>
+
+                        {/* Mark Price */}
+                        <td className="p-1 font-medium text-white">
+                          ${mark.toFixed(2)}
+                        </td>
+
+                        {/* Est Liq Price */}
+                        <td className="p-1">
+                          <span className="font-bold text-crt-bearish">
+                            ${pos.liquidationPrice.toFixed(2)}
+                          </span>
+                        </td>
+
+                        {/* Margin */}
+                        <td className="p-1 text-[#E0E0E0]">
+                          {pos.initialMargin.toFixed(2)} USDT
+                        </td>
+
+                        {/* TP / SL */}
+                        <td className="p-1">
+                          <div className="flex items-center space-x-1">
+                            {pos.tpPrice ? (
+                              <span className="text-[8.5px] px-1 bg-[#002B11] text-[#00FF66] border border-[#006622] font-bold">
+                                TP ${pos.tpPrice.toFixed(2)}
+                              </span>
+                            ) : null}
+                            {pos.slPrice ? (
+                              <span className="text-[8.5px] px-1 bg-[#2B0000] text-[#FF4444] border border-[#660000] font-bold">
+                                SL ${pos.slPrice.toFixed(2)}
+                              </span>
+                            ) : null}
+                            {!pos.tpPrice && !pos.slPrice && (
+                              <button
+                                onClick={() => {
+                                  setTpSlModalPosition(pos);
+                                  setModalTpPrice('');
+                                  setModalSlPrice('');
+                                  setTpSlError(null);
+                                }}
+                                className="text-[8px] text-[#888] hover:text-white underline cursor-pointer"
+                              >
+                                + Set TP/SL
+                              </button>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Unrealized PnL & ROE */}
+                        <td className={`p-1 font-bold ${isBullish ? 'text-crt-bullish' : 'text-crt-bearish'}`}>
+                          {isBullish ? '+' : ''}${pos.unrealizedPnl.toFixed(2)} ({isBullish ? '+' : ''}{pos.roe.toFixed(2)}%)
+                        </td>
+
+                        {/* Actions */}
+                        <td className="p-1 text-right pr-1.5">
+                          <div className="flex items-center justify-end space-x-1">
+                            <button
+                              onClick={() => {
+                                setTpSlModalPosition(pos);
+                                setModalTpPrice(pos.tpPrice ? pos.tpPrice.toFixed(2) : '');
+                                setModalSlPrice(pos.slPrice ? pos.slPrice.toFixed(2) : '');
+                                setTpSlError(null);
+                              }}
+                              className="win-btn text-[9px] px-1.5 py-0.5 text-black font-bold active:translate-x-0.5 active:translate-y-0.5 hover:bg-[#E0E0E0]"
+                              title="Set Take Profit & Stop Loss"
+                            >
+                              TP/SL
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedFlexTrade(pos);
+                                openWindow('flexcard');
+                                focusWindow('flexcard');
+                              }}
+                              className="win-btn text-[9px] px-1.5 py-0.5 text-titlebar-navy font-bold active:translate-x-0.5 active:translate-y-0.5"
+                              title="Share PnL Card"
+                            >
+                              Share ↗
+                            </button>
+                            <button
+                              onClick={() => {
+                                closePosition(pos.id, mark);
+                                soundFXService.playOrderExecuted();
+                              }}
+                              className="win-btn text-[9px] px-1.5 py-0.5 text-error font-bold active:translate-x-0.5 active:translate-y-0.5"
+                              title="Market Close Position"
+                            >
+                              Close [X]
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )
+        ) : (
+          tradeHistory.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center font-mono text-[10.5px] text-[#666] py-3">
+              <span className="text-[#888] font-bold">NO PAST ORDERS RECORDED IN THIS SESSION</span>
+              <span className="text-[9px] text-[#555] mt-0.5">Closed positions will be archived here.</span>
+            </div>
+          ) : (
+            <div className="flex-1 overflow-auto win-inset-deep bg-[#121212] p-0.5 mt-0.5">
+              <table className="w-full text-left font-mono text-[10px] text-white border-collapse min-w-[850px]">
+                <thead className="bg-[#202020] text-[#E0E0E0] border-b border-[#404040] sticky top-0 font-bold z-10">
+                  <tr>
+                    <th className="p-1 pl-1.5">Time</th>
+                    <th className="p-1">Pair</th>
+                    <th className="p-1">Side</th>
+                    <th className="p-1">Entry</th>
+                    <th className="p-1">Exit</th>
+                    <th className="p-1">Realized PnL</th>
+                    <th className="p-1">ROE %</th>
+                    <th className="p-1 text-right pr-1.5">Status / Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#1F1F1F]">
+                  {tradeHistory.map((item) => (
+                    <tr key={item.id} className="hover:bg-[#1A1A1A] transition-colors">
+                      <td className="p-1 pl-1.5 text-[#C0C0C0]">{new Date(item.closedAt).toLocaleTimeString()}</td>
+                      <td className="p-1 font-bold text-white">{pairLabelMap[item.pair]}</td>
+                      <td className="p-1">
+                        <span className={`font-bold ${item.direction === 'LONG' ? 'text-[#00FF66]' : 'text-[#FF4444]'}`}>
+                          {item.direction} {item.leverage}x
+                        </span>
+                      </td>
+                      <td className="p-1 text-[#E0E0E0]">${item.entryPrice.toFixed(2)}</td>
+                      <td className="p-1 text-[#E0E0E0]">${item.exitPrice.toFixed(2)}</td>
+                      <td className={`p-1 font-bold ${item.realizedPnl >= 0 ? 'text-crt-bullish' : 'text-crt-bearish'}`}>
+                        {item.realizedPnl >= 0 ? '+' : ''}${item.realizedPnl.toFixed(2)}
+                      </td>
+                      <td className={`p-1 font-bold ${item.roe >= 0 ? 'text-crt-bullish' : 'text-crt-bearish'}`}>
+                        {item.roe >= 0 ? '+' : ''}{item.roe.toFixed(2)}%
+                      </td>
+                      <td className="p-1 text-right pr-1.5">
+                        <div className="flex items-center justify-end space-x-1">
+                          <span
+                            className={`px-1 py-0.2 text-[8px] font-bold border ${
+                              item.status === 'LIQUIDATED'
+                                ? 'bg-[#440000] text-[#FF6666] border-[#FF3333]'
+                                : 'bg-[#003311] text-[#00FF66] border-[#00FF66]'
+                            }`}
+                          >
+                            {item.status}
+                          </span>
+                          <button
+                            onClick={() => {
+                              setSelectedFlexTrade(item);
+                              openWindow('flexcard');
+                              focusWindow('flexcard');
+                            }}
+                            className="win-btn text-[8px] px-1 py-0.2 text-titlebar-navy font-bold active:translate-x-0.5 active:translate-y-0.5"
+                            title="Share Flex Card"
+                          >
+                            Share ↗
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        )}
+      </div>
+    </div>
 
       {/* =================================================================== */}
       {/* WINDOWS 98 MODAL: Take Profit & Stop Loss Risk Management          */}

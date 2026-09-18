@@ -37,9 +37,9 @@ const INITIAL_WINDOWS: Record<WindowId, WindowState> = {
     isOpen: isWelcomeHidden,
     isMinimized: false,
     isMaximized: false,
-    position: { x: 60, y: 15 },
-    size: { width: 920, height: 600 },
-    defaultBounds: { x: 60, y: 15, width: 920, height: 600 },
+    position: { x: 30, y: 15 },
+    size: { width: 1040, height: 650 },
+    defaultBounds: { x: 30, y: 15, width: 1040, height: 650 },
     zIndex: 20,
   },
   degenvault: {
