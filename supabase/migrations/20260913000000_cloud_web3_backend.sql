@@ -198,8 +198,8 @@ BEGIN
         RAISE EXCEPTION 'Invalid Ethereum wallet address format';
     END IF;
 
-    -- Generate fallback retro handle from wallet address: Degen_0x12..78
-    v_default_name := COALESCE(NULLIF(TRIM(p_username), ''), 'Degen_' || SUBSTRING(v_clean_address FROM 1 FOR 6) || '..' || SUBSTRING(v_clean_address FROM 39 FOR 4));
+    -- Generate fallback retro handle from wallet address: 0x1234...5678
+    v_default_name := COALESCE(NULLIF(TRIM(p_username), ''), SUBSTRING(v_clean_address FROM 1 FOR 6) || '...' || SUBSTRING(v_clean_address FROM 39 FOR 4));
 
     -- Insert or get existing profile
     INSERT INTO public.profiles (wallet_address, username, avatar)

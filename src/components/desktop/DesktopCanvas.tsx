@@ -30,6 +30,9 @@ const OrderBookWindow = React.lazy(() =>
 const BSODModal = React.lazy(() =>
   import('@/components/modals/BSODModal').then((m) => ({ default: m.BSODModal }))
 );
+const EditProfileModal = React.lazy(() =>
+  import('@/components/modals/EditProfileModal').then((m) => ({ default: m.EditProfileModal }))
+);
 
 interface DesktopIconConfig {
   id: WindowId | 'recycle_bin' | 'connect_wallet';
@@ -56,6 +59,7 @@ export const DesktopCanvas: React.FC = () => {
   const isOrderBookOpen = useWindowStore((state) => state.windows.orderbook?.isOpen ?? false);
   const isFlexCardOpen = useWindowStore((state) => state.windows.flexcard?.isOpen ?? false);
   const isConnectModalOpen = useAuthStore((state) => state.isConnectModalOpen);
+  const isEditProfileOpen = useAuthStore((state) => state.isEditProfileOpen);
   const openConnectModal = useAuthStore((state) => state.openConnectModal);
   const isConnected = useAuthStore((state) => state.isConnected);
   const walletAddress = useAuthStore((state) => state.walletAddress);
@@ -223,6 +227,14 @@ export const DesktopCanvas: React.FC = () => {
         <RetroErrorBoundary name="ConnectWalletModal">
           <Suspense fallback={null}>
             <ConnectWalletModal />
+          </Suspense>
+        </RetroErrorBoundary>
+      )}
+
+      {isEditProfileOpen && (
+        <RetroErrorBoundary name="EditProfileModal">
+          <Suspense fallback={null}>
+            <EditProfileModal />
           </Suspense>
         </RetroErrorBoundary>
       )}

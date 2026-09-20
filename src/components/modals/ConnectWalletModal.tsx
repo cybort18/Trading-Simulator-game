@@ -8,6 +8,7 @@ import { PixelIcon } from '@/components/common/PixelIcon';
 export const ConnectWalletModal: React.FC = () => {
   const isConnectModalOpen = useAuthStore((state) => state.isConnectModalOpen);
   const closeConnectModal = useAuthStore((state) => state.closeConnectModal);
+  const openEditProfileModal = useAuthStore((state) => state.openEditProfileModal);
   const isConnected = useAuthStore((state) => state.isConnected);
   const isConnecting = useAuthStore((state) => state.isConnecting);
   const walletAddress = useAuthStore((state) => state.walletAddress);
@@ -209,12 +210,24 @@ export const ConnectWalletModal: React.FC = () => {
                 >
                   Disconnect Wallet
                 </button>
-                <button
-                  onClick={handleCloseModal}
-                  className="win-btn bg-win-base text-black px-4 py-1 text-[11px] font-bold active:translate-x-0.5 active:translate-y-0.5"
-                >
-                  Close
-                </button>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => {
+                      soundFXService.playKeyClick();
+                      openEditProfileModal();
+                    }}
+                    className="win-btn bg-win-base text-black px-3 py-1 text-[11px] font-bold flex items-center space-x-1 active:translate-x-0.5 active:translate-y-0.5 hover:bg-surface-high"
+                  >
+                    <PixelIcon name="user" size={12} className="text-titlebar-navy" />
+                    <span>Edit Profile</span>
+                  </button>
+                  <button
+                    onClick={handleCloseModal}
+                    className="win-btn bg-win-base text-black px-4 py-1 text-[11px] font-bold active:translate-x-0.5 active:translate-y-0.5"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             )}
           </div>

@@ -8,6 +8,7 @@ import { useTradingStore } from '@/stores/useTradingStore';
 import { Web3AuthService } from '@/services/Web3AuthService';
 import confetti from 'canvas-confetti';
 import { soundFXService } from '@/services/SoundFXService';
+import { RETRO_AVATARS } from '@/constants/avatars';
 
 function getRankAndXp(totalTrades: number, realizedPnl: number, winRate: number) {
   const xp = totalTrades * 120 + Math.max(0, Math.floor(realizedPnl * 10)) + Math.floor(winRate * 5);
@@ -76,9 +77,11 @@ export const DegenVaultWindow: React.FC = () => {
   const getTimeUntilNextDailyClaim = useWalletStore((state) => state.getTimeUntilNextDailyClaim);
 
   const username = useAuthStore((state) => state.username);
+  const avatar = useAuthStore((state) => state.avatar);
   const isConnected = useAuthStore((state) => state.isConnected);
   const walletAddress = useAuthStore((state) => state.walletAddress);
   const openConnectModal = useAuthStore((state) => state.openConnectModal);
+  const openEditProfileModal = useAuthStore((state) => state.openEditProfileModal);
 
   const recalculateEquity = useWalletStore((state) => state.recalculateEquity);
   const positions = useTradingStore((state) => state.positions);
@@ -299,9 +302,16 @@ export const DegenVaultWindow: React.FC = () => {
         {/* =================================================================== */}
         <div className="win-outset bg-surface-high p-2 flex items-center justify-between gap-3">
           <div className="flex items-center space-x-3">
-            {/* Retro Pixel Avatar or Wallet Blockie */}
-            <div className="w-12 h-12 win-inset-deep p-0.5 flex items-center justify-center flex-shrink-0">
-              {isConnected && walletAddress ? (
+            {/* Retro Pixel Avatar or Wallet Blockie (Clickable to Edit) */}
+            <div
+              onClick={() => {
+                soundFXService.playKeyClick();
+                openEditProfileModal();
+              }}
+              title="Click to edit profile & avatar"
+              className="w-12 h-12 win-inset-deep p-0.5 flex items-center justify-center flex-shrink-0 cursor-pointer hover:border-titlebar-navy hover:scale-105 transition-transform"
+            >
+              {avatar === 'pixel_face_blockie' && isConnected && walletAddress ? (
                 <div
                   className="w-full h-full flex flex-col items-center justify-center border font-mono font-bold text-white text-[16px]"
                   style={{
@@ -313,7 +323,9 @@ export const DegenVaultWindow: React.FC = () => {
                 </div>
               ) : (
                 <div className="w-full h-full bg-[#1e293b] flex flex-col items-center justify-center border border-titlebar-navy">
-                  <span className="text-[26px]">😎</span>
+                  <span className="text-[26px]">
+                    {RETRO_AVATARS.find((a) => a.id === avatar)?.emoji || '😎'}
+                  </span>
                 </div>
               )}
             </div>
@@ -324,6 +336,17 @@ export const DegenVaultWindow: React.FC = () => {
                 <span className="font-headline text-[15px] font-bold text-black tracking-tight">
                   {username}
                 </span>
+                <button
+                  onClick={() => {
+                    soundFXService.playKeyClick();
+                    openEditProfileModal();
+                  }}
+                  className="win-btn text-[9px] font-bold px-1.5 py-0.5 flex items-center space-x-1 text-black hover:bg-surface-high"
+                  title="Edit profile & username"
+                >
+                  <PixelIcon name="user" size={10} className="text-titlebar-navy" />
+                  <span>Edit Profile</span>
+                </button>
                 {isConnected ? (
                   <span className="bg-[#008531] text-white text-[9px] font-bold px-1.5 py-0.2 win-outset">
                     VERIFIED ON-CHAIN

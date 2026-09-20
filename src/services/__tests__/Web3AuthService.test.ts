@@ -109,4 +109,44 @@ describe('Web3AuthService & SIWE Authentication', () => {
     useAuthStore.getState().closeConnectModal();
     expect(useAuthStore.getState().isConnectModalOpen).toBe(false);
   });
+
+  it('toggles edit profile modal open and close states', () => {
+    expect(useAuthStore.getState().isEditProfileOpen).toBe(false);
+    useAuthStore.getState().openEditProfileModal();
+    expect(useAuthStore.getState().isEditProfileOpen).toBe(true);
+    useAuthStore.getState().closeEditProfileModal();
+    expect(useAuthStore.getState().isEditProfileOpen).toBe(false);
+  });
+
+  it('updates profile display name and avatar correctly', async () => {
+    const success = await useAuthStore.getState().updateProfile('CyberSamurai', 'pixel_face_4');
+    expect(success).toBe(true);
+
+    const state = useAuthStore.getState();
+    expect(state.username).toBe('CyberSamurai');
+    expect(state.avatar).toBe('pixel_face_4');
+  });
+
+  it('uses clean truncated wallet address without Degen prefix as fallback', () => {
+    const cleanAddress = sampleAddress.toLowerCase();
+    const truncatedHandle = Web3AuthService.truncateAddress(cleanAddress);
+
+    // Ensure truncated handle has NO 'Degen' or 'Degen_' prefix
+    expect(truncatedHandle).toBe('0x71c8...19e6');
+    expect(truncatedHandle).not.toMatch(/^Degen/i);
+
+    // Simulate wallet connection fallback state
+    useAuthStore.setState({
+      isGuest: false,
+      isConnected: true,
+      walletAddress: cleanAddress,
+      username: truncatedHandle,
+      avatar: 'pixel_face_1',
+    });
+
+    const state = useAuthStore.getState();
+    expect(state.username).toBe('0x71c8...19e6');
+    expect(state.username.startsWith('Degen')).toBe(false);
+  });
 });
+

@@ -26,10 +26,13 @@ export interface AuthState {
   rankTier: string;
   error: string | null;
   isConnectModalOpen: boolean;
+  isEditProfileOpen: boolean;
 
   // Actions
   openConnectModal: () => void;
   closeConnectModal: () => void;
+  openEditProfileModal: () => void;
+  closeEditProfileModal: () => void;
   connectWallet: () => Promise<boolean>;
   playAsGuest: () => void;
   disconnectWallet: () => void;
@@ -51,9 +54,12 @@ export const useAuthStore = create<AuthState>()(
       rankTier: 'Novice Liquidator',
       error: null,
       isConnectModalOpen: false,
+      isEditProfileOpen: false,
 
       openConnectModal: () => set({ isConnectModalOpen: true }),
       closeConnectModal: () => set({ isConnectModalOpen: false }),
+      openEditProfileModal: () => set({ isEditProfileOpen: true }),
+      closeEditProfileModal: () => set({ isEditProfileOpen: false }),
       clearError: () => set({ error: null }),
 
       playAsGuest: () => {
@@ -120,13 +126,15 @@ export const useAuthStore = create<AuthState>()(
               }
             }
 
+            const defaultHandle = Web3AuthService.truncateAddress(cleanAddress);
+
             if (!profileData) {
               // Standard init or fetch
               const { data: initData, error: initErr } = await supabase.rpc(
                 'rpc_initialize_wallet_user',
                 {
                   p_wallet_address: cleanAddress,
-                  p_username: null,
+                  p_username: defaultHandle,
                   p_avatar: 'pixel_face_1',
                 }
               );
@@ -180,12 +188,17 @@ export const useAuthStore = create<AuthState>()(
               useTradingStore.setState({ positions: mappedPositions });
             }
 
+            // If profile username is default Degen_* or empty, use clean wallet address
+            const resolvedUsername = (profileData?.username && !profileData.username.startsWith('Degen_'))
+              ? profileData.username
+              : defaultHandle;
+
             set({
               isGuest: false,
               isConnected: true,
               isConnecting: false,
               walletAddress: cleanAddress,
-              username: profileData?.username || `Degen_${cleanAddress.slice(0, 6)}..${cleanAddress.slice(-4)}`,
+              username: resolvedUsername,
               avatar: profileData?.avatar || 'pixel_face_1',
               xp: Number(profileData?.xp || 0),
               rankTier: profileData?.rank_tier || 'Novice Liquidator',
@@ -196,7 +209,7 @@ export const useAuthStore = create<AuthState>()(
           }
 
           // Fallback offline / local Web3 mode
-          const truncatedHandle = `Degen_${cleanAddress.slice(0, 6)}..${cleanAddress.slice(-4)}`;
+          const truncatedHandle = Web3AuthService.truncateAddress(cleanAddress);
           set({
             isGuest: false,
             isConnected: true,
